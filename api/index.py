@@ -32,6 +32,7 @@ from bot.handlers.balance import balance_command
 from bot.handlers.portfolio import portfolio_command
 from bot.handlers.digest import digest_command
 from bot.handlers.expense import undo_command
+import bot.config as config
 from bot.main import start_command, help_command, post_init
 
 # Global Application instance for serverless Vercel function
@@ -59,7 +60,7 @@ def get_telegram_app() -> Application:
         _app_instance.add_handler(CommandHandler("undo", undo_command))
         _app_instance.add_handler(CommandHandler("copilot", copilot_command))
         _app_instance.add_handler(MessageHandler(filters.Document.PDF, handle_pdf_document))
-        if ENABLE_COPILOT:
+        if config.ENABLE_COPILOT:
             _app_instance.add_handler(CallbackQueryHandler(copilot_quick_prompt, pattern="^cop:(budget|portfolio|tips|networth)$"))
             _app_instance.add_handler(CallbackQueryHandler(copilot_refresh,      pattern="^cop:refresh$"))
         _app_instance.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
@@ -93,12 +94,10 @@ class handler(BaseHTTPRequestHandler):
             asyncio.set_event_loop(loop)
             
             async def process():
-                await app.initialize()
-                await app.start()
+                if not app._initialized:
+                    await app.initialize()
                 update = Update.de_json(update_data, app.bot)
                 await app.process_update(update)
-                await app.stop()
-                await app.shutdown()
 
             loop.run_until_complete(process())
             loop.close()
