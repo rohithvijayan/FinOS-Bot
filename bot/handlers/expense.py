@@ -237,6 +237,16 @@ async def callback_save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             f"_Use /undo to delete this if you made a mistake._",
             parse_mode="Markdown",
         )
+
+        # Trigger Smart Budget Alerts & Threshold Guards (75% / 90%)
+        from bot.utils.budget_guard import check_category_budget_guard
+        await check_category_budget_guard(
+            category=pending["category"],
+            billing_month=month_label,
+            context=context,
+            bot=context.bot,
+            chat_id=update.effective_chat.id
+        )
     except Exception as exc:
         logger.exception("Failed to insert expense: %s", exc)
         await query.edit_message_text("❌ Failed to save. Check bot logs.")

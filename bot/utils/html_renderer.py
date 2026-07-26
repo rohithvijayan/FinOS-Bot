@@ -161,3 +161,25 @@ def render_digest_monthly_card(month: str, total_spent: float, categories: list[
         height = max(540, 420 + min(len(categories), 4) * 60)
         img_path = html_to_image("digest_monthly_card.html", "digest_monthly_card.png", size=(460, height))
     return html_content, img_path
+
+def render_budget_alert_card(category: str, amount_spent: float, limit_amount: float, threshold_level: int, billing_month: str, save_preview=True) -> tuple[str, Path | None]:
+    template = env.get_template("budget_alert_card.html")
+    pct_used = (amount_spent / limit_amount * 100) if limit_amount > 0 else 100.0
+    remaining = limit_amount - amount_spent
+    html_content = template.render(
+        category=category,
+        amount_spent=amount_spent,
+        limit_amount=limit_amount,
+        pct_used=pct_used,
+        threshold_level=threshold_level,
+        billing_month=billing_month,
+        remaining=remaining
+    )
+    img_path = None
+    if save_preview:
+        _ensure_previews_dir()
+        html_file = PREVIEWS_DIR / "budget_alert_card.html"
+        with open(html_file, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        img_path = html_to_image("budget_alert_card.html", "budget_alert_card.png", size=(460, 500))
+    return html_content, img_path

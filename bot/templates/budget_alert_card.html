@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Budget Alert - FinOS{% endblock %}
+{% block timestamp %}{{ billing_month }}{% endblock %}
+
+{% block content %}
+<div class="budget-alert-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    {% if threshold_level >= 90 %}
+      <span class="pill-tag pill-coral" style="font-size: 13px; font-weight: 700; padding: 6px 14px;">
+        <span class="material-symbols-outlined" style="font-size: 16px;">warning</span>
+        🚨 90% Critical Budget Cap
+      </span>
+    {% else %}
+      <span class="pill-tag pill-gold" style="font-size: 13px; font-weight: 700; padding: 6px 14px;">
+        <span class="material-symbols-outlined" style="font-size: 16px;">error_med</span>
+        ⚠️ 75% Budget Warning
+      </span>
+    {% endif %}
+    <span class="pill-tag pill-mint" style="font-family: var(--font-mono);">{{ pct_used|round(1) }}% Used</span>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="metric-value" style="font-size: 32px; color: {% if threshold_level >= 90 %}var(--soft-coral){% else %}var(--secondary-gold){% endif %};">
+      {{ category }}
+    </div>
+    <div class="metric-subtitle">
+      Category Threshold Guard Triggered
+    </div>
+  </div>
+
+  <!-- Progress Meter -->
+  <div style="margin-top: 20px; background-color: var(--surface-container); padding: 16px; border-radius: 14px; border: 1px solid {% if threshold_level >= 90 %}rgba(255, 180, 171, 0.4){% else %}rgba(255, 183, 121, 0.4){% endif %};">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600;">
+      <span style="color: var(--on-surface);">Spent vs Category Budget</span>
+      <span style="font-family: var(--font-mono); color: var(--on-surface);">₹{{ "{:,.0f}".format(amount_spent) }} / ₹{{ "{:,.0f}".format(limit_amount) }}</span>
+    </div>
+    <div class="progress-bar-container" style="height: 10px; margin-top: 10px;">
+      <div class="progress-bar-fill" style="width: {{ pct_used if pct_used <= 100 else 100 }}%; background: linear-gradient(90deg, var(--secondary-gold), {% if threshold_level >= 90 %}var(--soft-coral){% else %}#ffb779{% endif %});"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--on-surface-variant);">
+      <span>{{ pct_used|round(1) }}% of Allocated Limit</span>
+      <span style="font-weight: 700; color: {% if remaining <= 0 %}var(--soft-coral){% else %}var(--soft-mint){% endif %};">
+        {% if remaining <= 0 %}
+          ⚠️ Over Budget by ₹{{ "{:,.0f}".format(remaining|abs) }}
+        {% else %}
+          ₹{{ "{:,.0f}".format(remaining) }} Remaining Buffer
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- Recommendation Box -->
+  <div style="margin-top: 16px; background-color: var(--surface-container-high); padding: 12px 14px; border-radius: 12px; font-size: 12px; color: var(--on-surface-variant); line-height: 1.4;">
+    💡 <strong>Smart Advice:</strong> 
+    {% if threshold_level >= 90 %}
+      You're close to exceeding your {{ category }} cap for {{ billing_month }}. Consider pausing discretionary spending in this category.
+    {% else %}
+      You have used {{ pct_used|round(1) }}% of your {{ category }} budget. Track your next purchases carefully for the rest of the cycle.
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
