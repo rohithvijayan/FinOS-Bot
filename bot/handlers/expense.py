@@ -332,6 +332,142 @@ async def undo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.effective_message.reply_text("❌ Couldn't delete. Check bot logs.")
 
 
+# ── PDF Bank Statement Import Handler ───────────────────────────────────────
+
+_PENDING_BATCH_KEY = "pending_batch_expenses"
+
+@allowed_only
+async def handle_pdf_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Triggered when user uploads a PDF Bank/Credit Card Statement."""
+    doc = update.effective_message.document
+    if not doc or not doc.mime_type == "application/pdf":
+        return
+
+    thinking = await update.effective_message.reply_text(
+        f"📄 *Processing PDF Statement:* `{doc.file_name}`...\n"
+        f"🧠 Extracting debit expenses & classifying categories...",
+        parse_mode="Markdown"
+    )
+
+    try:
+        tg_file = await context.bot.get_file(doc.file_id)
+        pdf_bytes = await tg_file.download_as_bytearray()
+
+        from bot.utils.pdf_parser import extract_text_from_pdf_bytes, parse_pdf_statement_transactions
+        pdf_text = extract_text_from_pdf_bytes(bytes(pdf_bytes))
+
+        if not pdf_text:
+            await thinking.edit_text("❌ Could not extract text from this PDF file. It may be password protected or a scanned image.")
+            return
+
+        parsed_items = await parse_pdf_statement_transactions(pdf_text)
+        if not parsed_items:
+            await thinking.edit_text("ℹ️ No debit expenses detected in this statement.")
+            return
+
+        # Deduplication check against existing Supabase expenses
+        all_res = supabase.table("expenses").select("date, amount, description").execute()
+        existing_set = set()
+        for e in (all_res.data or []):
+            existing_set.add((str(e.get("date")), float(e.get("amount", 0)), str(e.get("description")).lower()))
+
+        new_items = []
+        skipped_count = 0
+        for item in parsed_items:
+            key = (str(item["date"]), float(item["amount"]), str(item["description"]).lower())
+            if key in existing_set:
+                skipped_count += 1
+            else:
+                new_items.append(item)
+
+        if not new_items:
+            await thinking.edit_text(
+                f"ℹ️ All {len(parsed_items)} transactions in `{doc.file_name}` are already present in your database."
+            )
+            return
+
+        total_amount = sum(i["amount"] for i in new_items)
+
+        # Store in pending batch
+        context.user_data[_PENDING_BATCH_KEY] = new_items
+
+        lines = [
+            f"📄 *Bank Statement Parsed:* `{doc.file_name}`\n",
+            f"⚡ *{len(new_items)} New Debit Expenses Found* (Total: {fmt_inr(total_amount)})",
+            f"_{skipped_count} existing transactions skipped_\n" if skipped_count > 0 else "",
+            "*Itemized Breakdown:*",
+        ]
+
+        for i, item in enumerate(new_items[:12], 1):
+            lines.append(f"{i}. `{item['date']}` · *{item['description']}* · {fmt_inr(item['amount'])} ({item['category']})")
+
+        if len(new_items) > 12:
+            lines.append(f"_...and {len(new_items) - 12} more transactions_")
+
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"✅ Batch Save {len(new_items)} Items to Supabase", callback_data="batch:save")],
+            [InlineKeyboardButton("❌ Cancel Import", callback_data="batch:cancel")]
+        ])
+
+        await thinking.delete()
+        await update.effective_message.reply_text(
+            "\n".join(lines),
+            parse_mode="Markdown",
+            reply_markup=kb
+        )
+
+    except Exception as exc:
+        logger.exception("Failed to process PDF statement: %s", exc)
+        await thinking.edit_text("❌ Error processing PDF statement. Check bot logs.")
+
+
+async def callback_batch_save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """User pressed ✅ Batch Save for PDF import."""
+    query = update.callback_query
+    await query.answer()
+
+    batch_items = context.user_data.get(_PENDING_BATCH_KEY)
+    if not batch_items:
+        await query.edit_message_text("⚠️ Batch data lost or expired. Please re-upload the PDF.")
+        return
+
+    try:
+        rows_to_insert = [
+            {
+                "date": item["date"],
+                "description": item["description"],
+                "amount": item["amount"],
+                "category": item["category"],
+                "month": item["month"],
+            }
+            for item in batch_items
+        ]
+
+        res = supabase.table("expenses").insert(rows_to_insert).execute()
+        count = len(res.data) if res.data else len(rows_to_insert)
+        total_amt = sum(item["amount"] for item in batch_items)
+
+        await query.edit_message_text(
+            f"🎉 *Batch Import Complete!*\n\n"
+            f"✅ Successfully inserted *{count} transactions* (Total: {fmt_inr(total_amt)}) into Supabase!\n\n"
+            f"_Your FinOS dashboard and monthly spending totals are updated._",
+            parse_mode="Markdown"
+        )
+    except Exception as exc:
+        logger.exception("Failed batch insert to Supabase: %s", exc)
+        await query.edit_message_text("❌ Failed batch save to database. Check bot logs.")
+
+    context.user_data.pop(_PENDING_BATCH_KEY, None)
+
+
+async def callback_batch_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """User pressed ❌ Cancel Import."""
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text("❌ Batch PDF import cancelled.")
+    context.user_data.pop(_PENDING_BATCH_KEY, None)
+
+
 # ── ConversationHandler factory ───────────────────────────────────────────────
 
 def build_expense_conversation() -> ConversationHandler:
@@ -359,3 +495,4 @@ def build_expense_conversation() -> ConversationHandler:
         per_user=True,
         per_chat=True,
     )
+

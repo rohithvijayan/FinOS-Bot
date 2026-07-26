@@ -181,9 +181,17 @@ def main() -> None:
     app.add_handler(CommandHandler("digest", digest_command))
     app.add_handler(CommandHandler("undo", undo_command))
 
-    # Inline Keyboard Callbacks for Month Picker
+    # PDF Bank Statement Importer Document Handler
+    from telegram.ext import filters, MessageHandler
+    from bot.handlers.expense import handle_pdf_document, callback_batch_save, callback_batch_cancel
+
+    app.add_handler(MessageHandler(filters.Document.MIMEType("application/pdf"), handle_pdf_document))
+
+    # Inline Keyboard Callbacks for Month Picker & Batch PDF Save
     app.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
     app.add_handler(CallbackQueryHandler(callback_select_spending_month, pattern="^spend_month:"))
+    app.add_handler(CallbackQueryHandler(callback_batch_save, pattern="^batch:save$"))
+    app.add_handler(CallbackQueryHandler(callback_batch_cancel, pattern="^batch:cancel$"))
 
     logger.info("Starting polling...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
