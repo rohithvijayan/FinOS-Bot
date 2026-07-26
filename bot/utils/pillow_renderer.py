@@ -212,7 +212,7 @@ def balance_card(
 ) -> Optional[bytes]:
     try:
         f = _load_fonts()
-        canvas_h = 480 + len(accounts) * 120 + 120
+        canvas_h = 480 + len(accounts) * 130 + 120
         img, draw = _canvas(canvas_h)
         ix, iy, ix2 = _card_bg(draw, canvas_h - 44)
         bw = ix2 - ix
@@ -237,16 +237,24 @@ def balance_card(
         y += 44
 
         for acct in accounts:
-            name = _strip(acct.get("name", "Account"))
-            bal  = acct.get("balance", 0)
-            atype = acct.get("type", "Savings Account")
+            # bank_name is the primary label (e.g. "HDFC", "SBI")
+            bank  = _strip(acct.get("bank_name") or acct.get("name") or "Bank")
+            aname = _strip(acct.get("name") or "")
+            bal   = acct.get("balance", 0)
+            rate  = acct.get("interest_rate", 0)
             amt_s = _fmt_inr(bal)
 
-            draw.text((ix, y), name, font=f["semi"], fill=TEXT_PRI)
+            # Bank name (primary, large)
+            draw.text((ix, y), bank, font=f["semi"], fill=TEXT_PRI)
             draw.text((ix2 - _tw(draw, amt_s, f["semi"]), y), amt_s, font=f["semi"], fill=PURPLE_LT)
-            y += 44
-            draw.text((ix, y), atype, font=f["sm"], fill=TEXT_MUT)
-            y += 50
+            y += 42
+            # Account name + interest rate (subtitle)
+            sub_parts = [aname] if aname and aname != bank else []
+            if rate:
+                sub_parts.append(f"{rate}% p.a.")
+            sub = "  ·  ".join(sub_parts) if sub_parts else "Savings Account"
+            draw.text((ix, y), sub, font=f["sm"], fill=TEXT_MUT)
+            y += 52
             _divider(draw, ix, y, ix2)
             y += 36
 
@@ -487,18 +495,51 @@ def expense_card(
         return None
 
 
+def _table_header(draw, ix, y, ix2, f, col_widths: list, labels: list, label_color=TEXT_SEC):
+    """Draw column headers for investment table."""
+    x = ix
+    for i, (label, w) in enumerate(zip(labels, col_widths)):
+        if i == 0:
+            draw.text((x, y), label, font=f["sm"], fill=label_color)
+        else:
+            tw = _tw(draw, label, f["sm"])
+            draw.text((x + w - tw, y), label, font=f["sm"], fill=label_color)
+        x += w
+    return y + 36
+
+
+def _table_row(draw, ix, y, ix2, f, col_widths: list, values: list,
+               name_color=TEXT_PRI, val_color=PURPLE_LT, ret_color=None):
+    """Draw one investment table row."""
+    x = ix
+    for i, (val, w) in enumerate(zip(values, col_widths)):
+        if i == 0:
+            # Name: truncate if too long
+            max_chars = w // 14
+            truncated = val if len(val) <= max_chars else val[:max_chars - 1] + "…"
+            draw.text((x, y), truncated, font=f["sm"], fill=name_color)
+        else:
+            color = (ret_color if ret_color and i == len(values) - 1 else val_color)
+            tw = _tw(draw, str(val), f["sm"])
+            draw.text((x + w - tw, y), str(val), font=f["sm"], fill=color)
+        x += w
+    return y + 44
+
+
 def portfolio_card(
     total_portfolio: float,
     asset_allocation: list,
     sips: Optional[list] = None,
+    bonds: Optional[list] = None,
     growth_pct: str = "2.4",
     total_sip_amount: float = 35_000,
 ) -> Optional[bytes]:
     try:
         f = _load_fonts()
-        sips = sips or []
-        n = len(asset_allocation) + len(sips)
-        canvas_h = 580 + n * 100 + 100
+        sips  = sips  or []
+        bonds = bonds or []
+        n_rows = len(sips) + len(bonds)
+        canvas_h = 600 + len(asset_allocation) * 90 + n_rows * 56 + 300
         img, draw = _canvas(canvas_h)
         ix, iy, ix2 = _card_bg(draw, canvas_h - 44)
         bw = ix2 - ix
@@ -509,14 +550,20 @@ def portfolio_card(
 
         draw.text((ix, y), _fmt_inr(total_portfolio), font=f["xxl"], fill=TEXT_PRI)
         y += 96
-        g_text = f"+{growth_pct}% this month"
+        # Clean up growth % — ensure max 2 decimal places
+        try:
+            g_val = float(growth_pct)
+            g_text = f"+{g_val:.2f}% overall return"
+        except ValueError:
+            g_text = f"+{growth_pct}% overall return"
         draw.text((ix, y), g_text, font=f["body"], fill=GREEN)
         y += 62
         _divider(draw, ix, y, ix2)
         y += 44
 
+        # ── Asset Allocation summary ──────────────────────────────────────────
         draw.text((ix, y), "Asset Allocation", font=f["lg"], fill=TEXT_SEC)
-        y += 56
+        y += 54
 
         for i, asset in enumerate(asset_allocation):
             color = CAT_COLORS[i % len(CAT_COLORS)]
@@ -524,32 +571,72 @@ def portfolio_card(
             amt   = asset.get("amount", 0)
             pct   = float(asset.get("pct", 0))
             amt_s = _fmt_inr(amt)
+            ps    = f"{pct:.1f}%"
 
             draw.text((ix, y), name, font=f["semi"], fill=TEXT_PRI)
-            draw.text((ix2 - _tw(draw, amt_s, f["semi"]), y), amt_s, font=f["semi"], fill=color)
-            y += 48
-            _bar(draw, ix + 36, y, bw - 36, 10, pct / 100, color, bg=(28, 30, 56), r=5)
-            ps = f"{pct:.0f}%"
-            draw.text((ix2 - _tw(draw, ps, f["sm"]), y - 22), ps, font=f["sm"], fill=TEXT_MUT)
+            # amount + pct on the right
+            right_str = f"{amt_s}  {ps}"
+            draw.text((ix2 - _tw(draw, right_str, f["semi"]), y), right_str, font=f["semi"], fill=color)
+            y += 46
+            _bar(draw, ix + 32, y, bw - 32, 12, pct / 100, color, bg=(28, 30, 56), r=6)
             y += 50
             _divider(draw, ix, y, ix2)
-            y += 30
+            y += 28
 
+        # ── Mutual Funds / SIPs table ─────────────────────────────────────────
         if sips:
             y += 20
-            draw.text((ix, y), "Active SIPs", font=f["lg"], fill=TEXT_SEC)
+            draw.text((ix, y), "Mutual Funds & SIPs", font=f["lg"], fill=TEXT_SEC)
             y += 56
+
+            # Column widths:  Name | Invested | Current | Return
+            C = [bw - 370, 120, 120, 130]  # sum = bw
+            y = _table_header(draw, ix, y, ix2, f, C,
+                              ["Fund", "Invested", "Current", "Return"])
+            _divider(draw, ix, y, ix2)
+            y += 16
+
             for sip in sips:
                 name  = _strip(sip.get("name", "SIP"))
-                amt   = sip.get("amount", 0)
-                amt_s = _fmt_inr(amt) + "/mo"
-                draw.text((ix, y), name, font=f["semi"], fill=TEXT_PRI)
-                draw.text((ix2 - _tw(draw, amt_s, f["semi"]), y), amt_s, font=f["semi"], fill=PURPLE_LT)
-                y += 64
-                _divider(draw, ix, y, ix2)
-                y += 28
+                inv   = _fmt_inr(float(sip.get("invested", 0)))
+                cur   = _fmt_inr(float(sip.get("current_value", 0)))
+                ret   = str(sip.get("return_pct", "—"))
+                # colour return green/red
+                try:
+                    ret_f = float(ret.strip("%"))
+                    rc = GREEN if ret_f >= 0 else RED
+                    ret = f"+{ret_f:.1f}%" if ret_f >= 0 else f"{ret_f:.1f}%"
+                except (ValueError, AttributeError):
+                    rc = TEXT_SEC
 
-        return _export(img, y + 56)
+                y = _table_row(draw, ix, y, ix2, f, C, [name, inv, cur, ret],
+                               ret_color=rc)
+                _divider(draw, ix, y, ix2)
+                y += 14
+
+        # ── Bonds table ───────────────────────────────────────────────────────
+        if bonds:
+            y += 24
+            draw.text((ix, y), "Bonds & Debt", font=f["lg"], fill=TEAL)
+            y += 56
+
+            CB = [bw - 350, 130, 130, 90]  # Name | Invested | Current | YTM
+            y = _table_header(draw, ix, y, ix2, f, CB,
+                              ["Bond", "Invested", "Current", "YTM"])
+            _divider(draw, ix, y, ix2)
+            y += 16
+
+            for bond in bonds:
+                name = _strip(bond.get("name", "Bond"))
+                inv  = _fmt_inr(float(bond.get("invested", 0)))
+                cur  = _fmt_inr(float(bond.get("current_value", 0)))
+                ytm  = str(bond.get("ytm", "—"))
+                y = _table_row(draw, ix, y, ix2, f, CB, [name, inv, cur, ytm],
+                               val_color=TEAL)
+                _divider(draw, ix, y, ix2)
+                y += 14
+
+        return _export(img, y + 70)
     except Exception as exc:
         logger.error("Pillow portfolio_card: %s", exc, exc_info=True)
         return None

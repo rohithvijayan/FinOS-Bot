@@ -70,14 +70,37 @@ async def portfolio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             {"name": "Mutual Funds & SIPs", "amount": sum(s.get("current_value", 0) for s in sips), "pct": round(sum(s.get("current_value", 0) for s in sips) / tot_val * 100, 1) if tot_val > 0 else 0},
             {"name": "Bonds & Debt", "amount": sum(b.get("current_value", 0) for b in bonds), "pct": round(sum(b.get("current_value", 0) for b in bonds) / tot_val * 100, 1) if tot_val > 0 else 0}
         ]
-        sip_list = [{"name": s.get("name"), "amount": s.get("monthly_sip")} for s in sips if s.get("monthly_sip", 0) > 0]
+        # Full SIP rows for table (name | invested | current_value | return_pct | monthly_sip)
+        sip_rows = [
+            {
+                "name":          s.get("name", "SIP"),
+                "invested":      s.get("invested", 0),
+                "current_value": s.get("current_value", 0),
+                "return_pct":    s.get("return_pct", "0%"),
+                "monthly_sip":   s.get("monthly_sip", 0),
+            }
+            for s in sips
+        ]
+        # Full bond rows for table (name | invested | current_value | ytm)
+        bond_rows = [
+            {
+                "name":          b.get("name", "Bond"),
+                "invested":      b.get("invested", 0),
+                "current_value": b.get("current_value", 0),
+                "ytm":           b.get("ytm", ""),
+            }
+            for b in bonds
+        ]
+
+        growth_pct_rounded = round(float(summary.get("return_pct", 0) or 0), 2)
 
         from bot.utils.html_renderer import render_portfolio_card
         _, img_path = render_portfolio_card(
             total_portfolio=tot_val,
             asset_allocation=asset_alloc,
-            sips=sip_list,
-            growth_pct=str(summary.get("return_pct", 2.4)),
+            sips=sip_rows,
+            bonds=bond_rows,
+            growth_pct=str(growth_pct_rounded),
             total_sip_amount=sip_tot
         )
 

@@ -192,7 +192,7 @@ def render_spending_card(
 
 def render_portfolio_card(
     total_portfolio, asset_allocation,
-    sips=None, growth_pct="2.4", total_sip_amount=35_000,
+    sips=None, bonds=None, growth_pct="2.4", total_sip_amount=35_000,
     save_preview=True,
 ) -> tuple[str, Path | None]:
     template = env.get_template("portfolio_card.html")
@@ -208,7 +208,8 @@ def render_portfolio_card(
         from bot.utils.pillow_renderer import portfolio_card as _pil
         img_path = _pil_bytes_to_path(
             _pil(total_portfolio=total_portfolio, asset_allocation=asset_allocation,
-                 sips=sips, growth_pct=growth_pct, total_sip_amount=total_sip_amount),
+                 sips=sips, bonds=bonds, growth_pct=growth_pct,
+                 total_sip_amount=total_sip_amount),
             "portfolio_card.png",
         )
         if img_path:
