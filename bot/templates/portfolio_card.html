@@ -14,7 +14,7 @@
   </div>
 
   <div style="margin-top: 16px;">
-    <div class="metric-value">₹{{ "{:,.2f}".format(total_portfolio) }}</div>
+    <div class="metric-value">₹{{ "{:,.2f}".format(total_portfolio or 0) }}</div>
     <div class="metric-subtitle">Investments, SIPs & Sovereign Assets</div>
   </div>
 
@@ -41,7 +41,7 @@
             <div class="item-sublabel">{{ asset.pct }}% of Total Assets</div>
           </div>
         </div>
-        <div class="item-amount">₹{{ "{:,.2f}".format(asset.amount) }}</div>
+        <div class="item-amount">₹{{ "{:,.2f}".format(asset.amount or 0) }}</div>
       </div>
       {% endfor %}
     </div>
@@ -52,13 +52,13 @@
   <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; margin-bottom: 8px;">
       <span style="color: var(--on-surface);">Active Monthly SIPs</span>
-      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹{{ "{:,.0f}".format(total_sip_amount|default(35000)) }}/mo</span>
+      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹{{ "{:,.0f}".format(total_sip_amount or 35000) }}/mo</span>
     </div>
     <div style="display: flex; flex-direction: column; gap: 6px;">
       {% for sip in sips %}
       <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--on-surface-variant);">
         <span>{{ sip.name }}</span>
-        <span style="font-family: var(--font-mono); color: var(--on-surface);">₹{{ "{:,.0f}".format(sip.amount) }}</span>
+        <span style="font-family: var(--font-mono); color: var(--on-surface);">₹{{ "{:,.0f}".format(sip.amount or sip.monthly_sip or 0) }}</span>
       </div>
       {% endfor %}
     </div>

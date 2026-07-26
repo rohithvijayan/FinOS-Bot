@@ -16,6 +16,7 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
+import bot.config as config
 from bot.handlers.auth import allowed_only
 from bot.config import GEMINI_API_KEY, GEMINI_MODEL
 
@@ -192,6 +193,10 @@ async def _ask_gemini(system_prompt: str, history: list[dict], user_msg: str) ->
 @allowed_only
 async def copilot_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Activate the FinOS Copilot assistant."""
+    if not config.ENABLE_COPILOT:
+        await update.effective_message.reply_text("⚠️ The AI Copilot feature is currently disabled.")
+        return
+
     thinking = await update.effective_message.reply_text("🤖 Loading your financial data...")
 
     try:
@@ -223,6 +228,10 @@ async def copilot_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 @allowed_only
 async def copilot_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle a user's question to the Copilot (non-command text while copilot active)."""
+    if not config.ENABLE_COPILOT:
+        await update.effective_message.reply_text("⚠️ The AI Copilot feature is currently disabled.")
+        return
+
     text = (update.effective_message.text or "").strip()
 
     system_prompt = context.user_data.get("_copilot_system")
@@ -253,6 +262,10 @@ async def copilot_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def copilot_quick_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle quick-prompt inline button taps."""
     query = update.callback_query
+    if not config.ENABLE_COPILOT:
+        if query:
+            await query.answer("⚠️ Copilot feature is disabled.", show_alert=True)
+        return
     await query.answer()
 
     prompts = {
@@ -302,6 +315,10 @@ async def copilot_quick_prompt(update: Update, context: ContextTypes.DEFAULT_TYP
 async def copilot_refresh(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Refresh Supabase data and reset the conversation."""
     query = update.callback_query
+    if not config.ENABLE_COPILOT:
+        if query:
+            await query.answer("⚠️ Copilot feature is disabled.", show_alert=True)
+        return
     await query.answer("Refreshing data...")
     await query.edit_message_text("🔄 Refreshing your financial data...")
 

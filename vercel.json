@@ -1,4 +1,7 @@
 {
+  "env": {
+    "ENABLE_COPILOT": "false"
+  },
   "builds": [
     {
       "src": "api/index.py",

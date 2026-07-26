@@ -29,6 +29,7 @@ from telegram.ext import (
 )
 
 from bot.handlers.auth import allowed_only
+from bot.config import ENABLE_COPILOT
 from bot.gemini_client import parse_expense
 from bot.supabase_client import supabase
 from bot.utils.categories import UI_CATEGORIES, CATEGORY_ICONS
@@ -142,20 +143,25 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         return ConversationHandler.END
 
     if text == "🤖 Copilot":
+        if not ENABLE_COPILOT:
+            await update.effective_message.reply_text("⚠️ The AI Copilot feature is currently disabled.")
+            return ConversationHandler.END
         from bot.handlers.copilot import copilot_command
         await copilot_command(update, context)
         return ConversationHandler.END
 
     # If Copilot session is active, route all non-expense text to the AI
-    if context.user_data.get("_copilot_system"):
+    if ENABLE_COPILOT and context.user_data.get("_copilot_system"):
         from bot.handlers.copilot import copilot_message
         await copilot_message(update, context)
         return ConversationHandler.END
 
     if not _looks_like_expense(text):
+        fallback = "💬 I didn't detect an expense in that message.\n\nTry: _\"spent 350 at Zomato\"_"
+        if ENABLE_COPILOT:
+            fallback += " or tap *🤖 Copilot* to chat with your finance AI."
         await update.effective_message.reply_text(
-            "💬 I didn't detect an expense in that message.\n\n"
-            "Try: _\"spent 350 at Zomato\"_ or tap *🤖 Copilot* to chat with your finance AI.",
+            fallback,
             parse_mode="Markdown",
         )
         return ConversationHandler.END

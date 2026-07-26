@@ -59,8 +59,9 @@ def get_telegram_app() -> Application:
         _app_instance.add_handler(CommandHandler("undo", undo_command))
         _app_instance.add_handler(CommandHandler("copilot", copilot_command))
         _app_instance.add_handler(MessageHandler(filters.Document.PDF, handle_pdf_document))
-        _app_instance.add_handler(CallbackQueryHandler(copilot_quick_prompt, pattern="^cop:(budget|portfolio|tips|networth)$"))
-        _app_instance.add_handler(CallbackQueryHandler(copilot_refresh,      pattern="^cop:refresh$"))
+        if ENABLE_COPILOT:
+            _app_instance.add_handler(CallbackQueryHandler(copilot_quick_prompt, pattern="^cop:(budget|portfolio|tips|networth)$"))
+            _app_instance.add_handler(CallbackQueryHandler(copilot_refresh,      pattern="^cop:refresh$"))
         _app_instance.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
         _app_instance.add_handler(CallbackQueryHandler(callback_select_spending_month, pattern="^spend_month:"))
         _app_instance.add_handler(CallbackQueryHandler(callback_batch_save, pattern="^batch:save$"))

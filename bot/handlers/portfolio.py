@@ -78,6 +78,7 @@ async def portfolio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 "current_value": s.get("current_value", 0),
                 "return_pct":    s.get("return_pct", "0%"),
                 "monthly_sip":   s.get("monthly_sip", 0),
+                "amount":        s.get("amount", s.get("monthly_sip", 0)),
             }
             for s in sips
         ]

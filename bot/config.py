@@ -22,3 +22,7 @@ SUPABASE_KEY: str = os.environ["SUPABASE_KEY"]  # service-role key
 # ── Gemini ────────────────────────────────────────────────────────────────────
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL: str = "gemini-2.0-flash"
+
+# ── Feature Flags ─────────────────────────────────────────────────────────────
+ENABLE_COPILOT: bool = os.getenv("ENABLE_COPILOT", "false").lower() in ("true", "1", "yes", "on")
+

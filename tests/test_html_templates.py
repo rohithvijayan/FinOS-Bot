@@ -70,8 +70,8 @@ def test_render_all_templates():
     ]
     sips_data = [
         {"name": "Parag Parikh Flexi Cap", "amount": 15000.00},
-        {"name": "Mirae Asset Large Cap", "amount": 10000.00},
-        {"name": "Nippon India Small Cap", "amount": 10000.00}
+        {"name": "Mirae Asset Large Cap", "monthly_sip": 10000.00},
+        {"name": "Nippon India Small Cap", "invested": 50000, "current_value": 60000}
     ]
     portfolio_html, portfolio_img = render_portfolio_card(
         total_portfolio=4820500.00,
@@ -81,6 +81,9 @@ def test_render_all_templates():
         total_sip_amount=35000.00
     )
     assert "4,820,500.00" in portfolio_html
+    assert "Mirae Asset Large Cap" in portfolio_html
+    assert "10,000" in portfolio_html
+    print("✅ Investment Portfolio Card & Image rendered successfully!")
     # 5. Start Welcome Card Test
     from bot.utils.html_renderer import render_start_card
     start_html, start_img = render_start_card()

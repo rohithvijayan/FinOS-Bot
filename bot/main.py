@@ -15,6 +15,7 @@ import sys
 from telegram import BotCommand, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+import bot.config as config
 from bot.config import TELEGRAM_BOT_TOKEN, ALLOWED_CHAT_IDS
 from bot.handlers.balance import balance_command
 from bot.handlers.spending import spending_command
@@ -38,12 +39,14 @@ from telegram import ReplyKeyboardMarkup, KeyboardButton
 
 def get_main_reply_keyboard() -> ReplyKeyboardMarkup:
     """Return persistent bottom menu keyboard."""
+    kb = [
+        [KeyboardButton("💳 Liquid Balance"),       KeyboardButton("📊 Monthly Spending")],
+        [KeyboardButton("📈 Investment Portfolio"),  KeyboardButton("🌆 Daily Digest")],
+    ]
+    if config.ENABLE_COPILOT:
+        kb.append([KeyboardButton("🤖 Copilot")])
     return ReplyKeyboardMarkup(
-        [
-            [KeyboardButton("💳 Liquid Balance"),       KeyboardButton("📊 Monthly Spending")],
-            [KeyboardButton("📈 Investment Portfolio"),  KeyboardButton("🌆 Daily Digest")],
-            [KeyboardButton("🤖 Copilot")],
-        ],
+        kb,
         resize_keyboard=True,
         is_persistent=True
     )
@@ -86,7 +89,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 @allowed_only
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /help."""
-    await update.effective_message.reply_text(
+    help_msg = (
         "📖 *FinOS Bot — Commands*\n\n"
         "━━━━━ 💸 Expense Logging ━━━━━\n"
         "Just send any message with an amount:\n"
@@ -98,13 +101,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/spending — Current month category breakdown\n"
         "/portfolio — Investment overview\n"
         "/digest — Daily & Monthly digest\n\n"
-        "━━━━━ 🤖 AI Copilot ━━━━━\n"
-        "/copilot — Chat with your personal finance AI\n"
-        "Ask anything: \"Am I on budget?\", \"Which SIP is performing best?\"\n\n"
+    )
+    if config.ENABLE_COPILOT:
+        help_msg += (
+            "━━━━━ 🤖 AI Copilot ━━━━━\n"
+            "/copilot — Chat with your personal finance AI\n"
+            "Ask anything: \"Am I on budget?\", \"Which SIP is performing best?\"\n\n"
+        )
+    help_msg += (
         "━━━━━ 🔧 Other ━━━━━\n"
         "/undo — Delete last logged expense\n"
         "/start — Welcome message\n"
-        "/help — This message",
+        "/help — This message"
+    )
+    await update.effective_message.reply_text(
+        help_msg,
         parse_mode="Markdown",
     )
 
@@ -124,9 +135,10 @@ async def post_init(application: Application) -> None:
         BotCommand("spending", "Monthly spending breakdown"),
         BotCommand("portfolio","Investment portfolio overview"),
         BotCommand("digest",   "Daily & Monthly Push Intelligence Digest"),
-        BotCommand("copilot",  "Chat with your personal finance AI Copilot"),
-        BotCommand("undo",     "Delete last logged expense"),
     ]
+    if config.ENABLE_COPILOT:
+        commands.append(BotCommand("copilot",  "Chat with your personal finance AI Copilot"))
+    commands.append(BotCommand("undo",     "Delete last logged expense"))
     await application.bot.set_my_commands(commands)
     logger.info("Bot commands registered.")
 
