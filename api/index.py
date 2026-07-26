@@ -87,8 +87,10 @@ class handler(BaseHTTPRequestHandler):
             
             async def process():
                 await app.initialize()
+                await app.start()
                 update = Update.de_json(update_data, app.bot)
                 await app.process_update(update)
+                await app.stop()
                 await app.shutdown()
 
             loop.run_until_complete(process())
