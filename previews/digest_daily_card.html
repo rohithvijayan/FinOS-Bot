@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Liquid Savings & Balance - FinOS</title>
+  <title>Daily Financial Digest - FinOS</title>
   <!-- Google Fonts: Hanken Grotesk & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -266,90 +266,67 @@
         </div>
         <span class="brand-name">FinOS</span>
       </div>
-      <div class="timestamp-pill">Real-time Sync</div>
+      <div class="timestamp-pill">26 Jul 2026</div>
     </div>
 
     
-<div class="balance-container">
+<div class="digest-daily-container">
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
     <span class="pill-tag pill-mint">
-      <span class="material-symbols-outlined" style="font-size: 14px;">account_balance</span>
-      Liquid Reserves
+      <span class="material-symbols-outlined" style="font-size: 14px;">today</span>
+      Daily Digest
     </span>
-    <span class="pill-tag pill-gold" style="font-family: var(--font-mono);">3 Accounts</span>
+    <span class="pill-tag pill-gold" style="font-family: var(--font-mono);">26 Jul 2026</span>
   </div>
 
   <div style="margin-top: 16px;">
-    <div class="metric-value">₹1,245,000.00</div>
-    <div class="metric-subtitle">Total Available Cash & Liquid Assets</div>
+    <div class="metric-value">₹530.00</div>
+    <div class="metric-subtitle">Total Spent Today across all categories</div>
   </div>
 
-  <!-- Emergency Reserve Progress Bar -->
+  <!-- Daily Budget Pace Indicator -->
+  
+  
   <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600;">
-      <span style="color: var(--on-surface);">Emergency Fund Target</span>
-      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹1,500,000</span>
+      <span style="color: var(--on-surface);">Daily Budget Target</span>
+      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹530 / ₹1,600</span>
     </div>
     <div class="progress-bar-container">
-      <div class="progress-bar-fill" style="width: 83%; background: linear-gradient(90deg, var(--soft-mint), #0b966d);"></div>
+      <div class="progress-bar-fill" style="width: 33.1%; background: linear-gradient(90deg, var(--soft-mint), var(--secondary-gold));"></div>
     </div>
     <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--on-surface-variant);">
-      <span>83% Funded</span>
-      <span>6 Months Buffer</span>
+      <span>33.1% of Daily Pace</span>
+      <span>₹1,070 Under Cap</span>
     </div>
   </div>
 
-  <!-- Account Breakdown List -->
-  <div class="item-list" style="margin-top: 16px;">
-    
-    <div class="item-row">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
-          <span class="material-symbols-outlined" style="font-size: 18px;">
-            account_balance
-            
-          </span>
-        </div>
-        <div>
-          <div class="item-label">HDFC Savings Account</div>
-          <div class="item-sublabel">Primary Bank</div>
-        </div>
-      </div>
-      <div class="item-amount">₹450,000.00</div>
+  <!-- Today's Transactions List -->
+  <div style="margin-top: 20px;">
+    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--on-surface-variant); margin-bottom: 10px;">
+      Today's Expenses (2)
     </div>
-    
-    <div class="item-row">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
-          <span class="material-symbols-outlined" style="font-size: 18px;">
-            credit_card
-            
-          </span>
+    <div class="item-list" style="margin-top: 0;">
+      
+        
+        <div class="item-row">
+          <div>
+            <div class="item-label">Zomato Dinner</div>
+            <div class="item-sublabel">Eating Out</div>
+          </div>
+          <div class="item-amount" style="color: var(--soft-mint);">₹350.00</div>
         </div>
-        <div>
-          <div class="item-label">ICICI Direct Account</div>
-          <div class="item-sublabel">Secondary Bank</div>
+        
+        <div class="item-row">
+          <div>
+            <div class="item-label">Uber Office</div>
+            <div class="item-sublabel">Transport</div>
+          </div>
+          <div class="item-amount" style="color: var(--soft-mint);">₹180.00</div>
         </div>
-      </div>
-      <div class="item-amount">₹295,000.00</div>
+        
+      
     </div>
-    
-    <div class="item-row">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
-          <span class="material-symbols-outlined" style="font-size: 18px;">
-            savings
-            
-          </span>
-        </div>
-        <div>
-          <div class="item-label">Emergency Cash Fund</div>
-          <div class="item-sublabel">Liquid Buffer</div>
-        </div>
-      </div>
-      <div class="item-amount">₹500,000.00</div>
-    </div>
-    
   </div>
 </div>
 

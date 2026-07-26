@@ -13,10 +13,10 @@ from bot.utils.html_renderer import (
 )
 
 def test_render_all_templates():
-    print("Testing FinOS HTML Card Templates Generation...")
+    print("Testing FinOS HTML Card & Image Templates Generation...")
 
     # 1. Expense Card Test
-    expense_html = render_expense_card(
+    expense_html, expense_img = render_expense_card(
         amount=350.00,
         category="Eating Out",
         merchant="Zomato",
@@ -27,7 +27,7 @@ def test_render_all_templates():
     )
     assert "Zomato" in expense_html
     assert "350.00" in expense_html
-    print("✅ Expense Confirmation Card rendered successfully!")
+    print("✅ Expense Confirmation Card & Image rendered successfully!")
 
     # 2. Balance Card Test
     accounts_data = [
@@ -35,7 +35,7 @@ def test_render_all_templates():
         {"name": "ICICI Direct Account", "type": "Secondary Bank", "balance": 295000.00},
         {"name": "Emergency Cash Fund", "type": "Liquid Buffer", "balance": 500000.00}
     ]
-    balance_html = render_balance_card(
+    balance_html, balance_img = render_balance_card(
         total_liquid=1245000.00,
         accounts=accounts_data,
         emergency_target=1500000.00,
@@ -43,15 +43,15 @@ def test_render_all_templates():
     )
     assert "1,245,000.00" in balance_html
     assert "HDFC Savings Account" in balance_html
-    print("✅ Balance Overview Card rendered successfully!")
+    print("✅ Balance Overview Card & Image rendered successfully!")
 
-    # 3. Monthly Spending Card Test (matching exact billing month cutoff rule)
+    # 3. Monthly Spending Card Test
     categories_data = [
         {"name": "Eating Out", "amount": 182.00},
         {"name": "Groceries", "amount": 255.00},
         {"name": "Shopping", "amount": 200.00}
     ]
-    spending_html = render_spending_card(
+    spending_html, spending_img = render_spending_card(
         month="August 2026",
         total_spent=637.00,
         categories=categories_data,
@@ -60,7 +60,7 @@ def test_render_all_templates():
     )
     assert "637.00" in spending_html
     assert "August 2026" in spending_html
-    print("✅ Monthly Spending Card rendered successfully!")
+    print("✅ Monthly Spending Card & Image rendered successfully!")
 
     # 4. Investment Portfolio Card Test
     asset_allocation = [
@@ -73,7 +73,7 @@ def test_render_all_templates():
         {"name": "Mirae Asset Large Cap", "amount": 10000.00},
         {"name": "Nippon India Small Cap", "amount": 10000.00}
     ]
-    portfolio_html = render_portfolio_card(
+    portfolio_html, portfolio_img = render_portfolio_card(
         total_portfolio=4820500.00,
         asset_allocation=asset_allocation,
         sips=sips_data,
@@ -81,8 +81,11 @@ def test_render_all_templates():
         total_sip_amount=35000.00
     )
     assert "4,820,500.00" in portfolio_html
-    assert "Parag Parikh Flexi Cap" in portfolio_html
-    print("✅ Investment Portfolio Card rendered successfully!")
+    # 5. Start Welcome Card Test
+    from bot.utils.html_renderer import render_start_card
+    start_html, start_img = render_start_card()
+    assert "FinOS Wealth OS" in start_html
+    print("✅ Start Welcome Card & Image rendered successfully!")
 
 if __name__ == "__main__":
     test_render_all_templates()

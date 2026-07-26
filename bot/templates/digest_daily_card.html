@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Financial Digest - FinOS{% endblock %}
+{% block timestamp %}{{ date }}{% endblock %}
+
+{% block content %}
+<div class="digest-daily-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    <span class="pill-tag pill-mint">
+      <span class="material-symbols-outlined" style="font-size: 14px;">today</span>
+      Daily Digest
+    </span>
+    <span class="pill-tag pill-gold" style="font-family: var(--font-mono);">{{ date }}</span>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="metric-value">₹{{ "{:,.2f}".format(total_today) }}</div>
+    <div class="metric-subtitle">Total Spent Today across all categories</div>
+  </div>
+
+  <!-- Daily Budget Pace Indicator -->
+  {% set daily_cap = daily_target|default(1600) %}
+  {% set daily_pct = ((total_today / daily_cap) * 100)|round(1) if daily_cap > 0 else 0 %}
+  <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600;">
+      <span style="color: var(--on-surface);">Daily Budget Target</span>
+      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹{{ "{:,.0f}".format(total_today) }} / ₹{{ "{:,.0f}".format(daily_cap) }}</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" style="width: {{ daily_pct if daily_pct <= 100 else 100 }}%; background: linear-gradient(90deg, var(--soft-mint), {% if daily_pct > 100 %}var(--soft-coral){% else %}var(--secondary-gold){% endif %});"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--on-surface-variant);">
+      <span>{{ daily_pct }}% of Daily Pace</span>
+      <span>{% if total_today <= daily_cap %}₹{{ "{:,.0f}".format(daily_cap - total_today) }} Under Cap{% else %}⚠️ Over Target{% endif %}</span>
+    </div>
+  </div>
+
+  <!-- Today's Transactions List -->
+  <div style="margin-top: 20px;">
+    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--on-surface-variant); margin-bottom: 10px;">
+      Today's Expenses ({% if expenses %}{{ expenses|length }}{% else %}0{% endif %})
+    </div>
+    <div class="item-list" style="margin-top: 0;">
+      {% if expenses %}
+        {% for exp in expenses %}
+        <div class="item-row">
+          <div>
+            <div class="item-label">{{ exp.description|default('Expense') }}</div>
+            <div class="item-sublabel">{{ exp.category|default('Others') }}</div>
+          </div>
+          <div class="item-amount" style="color: var(--soft-mint);">₹{{ "{:,.2f}".format(exp.amount) }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="item-row" style="justify-content: center; color: var(--soft-mint); font-weight: 600; padding: 16px;">
+          ✨ No expenses logged today — Great job!
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

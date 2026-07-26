@@ -118,12 +118,33 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if chat_id not in ALLOWED_CHAT_IDS:
         return ConversationHandler.END
 
-    text = update.effective_message.text or ""
+    text = (update.effective_message.text or "").strip()
+
+    # Route menu button clicks
+    if text == "💳 Liquid Balance":
+        from bot.handlers.balance import balance_command
+        await balance_command(update, context)
+        return ConversationHandler.END
+
+    if text == "📊 Monthly Spending":
+        from bot.handlers.spending import spending_command
+        await spending_command(update, context)
+        return ConversationHandler.END
+
+    if text == "📈 Investment Portfolio":
+        from bot.handlers.portfolio import portfolio_command
+        await portfolio_command(update, context)
+        return ConversationHandler.END
+
+    if text == "🌆 Daily Digest":
+        from bot.handlers.digest import digest_command
+        await digest_command(update, context)
+        return ConversationHandler.END
 
     if not _looks_like_expense(text):
         await update.effective_message.reply_text(
             "💬 I didn't detect an expense in that message.\n\n"
-            "Try: _\"spent 350 at Zomato\"_ or use /help to see all commands.",
+            "Try: _\"spent 350 at Zomato\"_ or tap the menu buttons below.",
             parse_mode="Markdown",
         )
         return ConversationHandler.END
@@ -142,8 +163,8 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Store pending expense in user context
     context.user_data[_PENDING_KEY] = parsed
 
-    # Render HTML preview card
-    render_expense_card(
+    # Render HTML preview card & convert to PNG image
+    _, img_path = render_expense_card(
         amount=parsed["amount"],
         category=parsed["category"],
         merchant=parsed["description"],
@@ -163,11 +184,22 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if parsed.get("confidence", 1.0) < 0.75:
         confidence_note = "\n\n_⚠️ Low confidence — please verify the category._"
 
-    await thinking_msg.edit_text(
-        preview + confidence_note,
-        parse_mode="Markdown",
-        reply_markup=_confirm_keyboard(),
-    )
+    await thinking_msg.delete()
+
+    if img_path and img_path.exists():
+        with open(img_path, "rb") as photo_file:
+            await update.effective_message.reply_photo(
+                photo=photo_file,
+                caption=f"⚡ *Expense Detected*\n{preview}{confidence_note}",
+                parse_mode="Markdown",
+                reply_markup=_confirm_keyboard(),
+            )
+    else:
+        await update.effective_message.reply_text(
+            preview + confidence_note,
+            parse_mode="Markdown",
+            reply_markup=_confirm_keyboard(),
+        )
     return AWAITING_CONFIRM
 
 

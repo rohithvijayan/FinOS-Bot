@@ -40,10 +40,18 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         ]
 
         total_liq = sum(a["balance"] for a in normalised)
-        render_balance_card(total_liquid=total_liq, accounts=normalised)
+        _, img_path = render_balance_card(total_liquid=total_liq, accounts=normalised)
 
         msg = build_balance_message(normalised)
-        await update.effective_message.reply_text(msg, parse_mode="Markdown")
+        if img_path and img_path.exists():
+            with open(img_path, "rb") as photo_file:
+                await update.effective_message.reply_photo(
+                    photo=photo_file,
+                    caption="🏦 *Liquid Reserves & Account Balances*",
+                    parse_mode="Markdown"
+                )
+        else:
+            await update.effective_message.reply_text(msg, parse_mode="Markdown")
 
     except Exception as exc:
         logger.exception("Failed to fetch balance: %s", exc)

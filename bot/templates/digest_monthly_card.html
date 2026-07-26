@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Executive Digest - FinOS{% endblock %}
+{% block timestamp %}{{ date_range|default('25 Jul - 24 Aug') }}{% endblock %}
+
+{% block content %}
+<div class="digest-monthly-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    <span class="pill-tag pill-gold">
+      <span class="material-symbols-outlined" style="font-size: 14px;">analytics</span>
+      Executive Monthly Digest
+    </span>
+    <span class="pill-tag pill-mint" style="font-family: var(--font-mono);">{{ month }}</span>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="metric-value">₹{{ "{:,.2f}".format(total_spent) }}</div>
+    <div class="metric-subtitle">Total Spent in {{ month }} Billing Cycle</div>
+  </div>
+
+  <!-- Budget Meter -->
+  {% set budget = monthly_budget|default(50000) %}
+  {% set budget_pct = ((total_spent / budget) * 100)|round(1) if budget > 0 else 0 %}
+  <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600;">
+      <span style="color: var(--on-surface);">Monthly Budget Utilization</span>
+      <span style="color: var(--secondary-gold); font-family: var(--font-mono);">₹{{ "{:,.0f}".format(total_spent) }} / ₹{{ "{:,.0f}".format(budget) }}</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" style="width: {{ budget_pct if budget_pct <= 100 else 100 }}%; background: linear-gradient(90deg, var(--soft-mint), var(--secondary-gold));"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--on-surface-variant);">
+      <span>{{ budget_pct }}% Budget Used</span>
+      <span>₹{{ "{:,.0f}".format(budget - total_spent) }} Unspent Buffer</span>
+    </div>
+  </div>
+
+  <!-- Key Metrics 2-column Grid -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px;">
+    <div style="background-color: var(--surface-container); padding: 12px; border-radius: 12px; border: 1px solid var(--outline-subtle);">
+      <div style="font-size: 11px; color: var(--on-surface-variant);">Total Liquid Reserves</div>
+      <div style="font-size: 16px; font-weight: 700; color: var(--soft-mint); margin-top: 4px; font-family: var(--font-mono);">₹{{ "{:,.0f}".format(total_liquid|default(1245000)) }}</div>
+    </div>
+    <div style="background-color: var(--surface-container); padding: 12px; border-radius: 12px; border: 1px solid var(--outline-subtle);">
+      <div style="font-size: 11px; color: var(--on-surface-variant);">Top Expense Category</div>
+      <div style="font-size: 15px; font-weight: 700; color: var(--on-surface); margin-top: 4px;">{{ top_category|default('Eating Out') }}</div>
+    </div>
+  </div>
+
+  <!-- Category Distribution List -->
+  <div style="margin-top: 20px;">
+    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--on-surface-variant); margin-bottom: 10px;">
+      Top Category Distribution
+    </div>
+    <div class="item-list" style="margin-top: 0;">
+      {% for cat in categories[:4] %}
+      {% set cat_pct = ((cat.amount / total_spent) * 100)|round(1) if total_spent > 0 else 0 %}
+      <div class="item-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="item-label">{{ cat.name }}</span>
+          <span class="item-amount">₹{{ "{:,.2f}".format(cat.amount) }} ({{ cat_pct }}%)</span>
+        </div>
+        <div class="progress-bar-container" style="height: 4px; margin-top: 0;">
+          <div class="progress-bar-fill" style="width: {{ cat_pct }}%; background-color: var(--soft-mint);"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

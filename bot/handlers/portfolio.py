@@ -73,7 +73,7 @@ async def portfolio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         sip_list = [{"name": s.get("name"), "amount": s.get("monthly_sip")} for s in sips if s.get("monthly_sip", 0) > 0]
 
         from bot.utils.html_renderer import render_portfolio_card
-        render_portfolio_card(
+        _, img_path = render_portfolio_card(
             total_portfolio=tot_val,
             asset_allocation=asset_alloc,
             sips=sip_list,
@@ -82,7 +82,15 @@ async def portfolio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         )
 
         msg = build_portfolio_message(summary, sips, bonds)
-        await update.effective_message.reply_text(msg, parse_mode="Markdown")
+        if img_path and img_path.exists():
+            with open(img_path, "rb") as photo_file:
+                await update.effective_message.reply_photo(
+                    photo=photo_file,
+                    caption="📈 *Net Worth & Investment Portfolio*",
+                    parse_mode="Markdown"
+                )
+        else:
+            await update.effective_message.reply_text(msg, parse_mode="Markdown")
 
     except Exception as exc:
         logger.exception("Failed to fetch portfolio: %s", exc)

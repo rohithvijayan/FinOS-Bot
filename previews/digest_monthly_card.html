@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Liquid Savings & Balance - FinOS</title>
+  <title>Monthly Executive Digest - FinOS</title>
   <!-- Google Fonts: Hanken Grotesk & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -266,90 +266,94 @@
         </div>
         <span class="brand-name">FinOS</span>
       </div>
-      <div class="timestamp-pill">Real-time Sync</div>
+      <div class="timestamp-pill">25 Jul - 24 Aug</div>
     </div>
 
     
-<div class="balance-container">
+<div class="digest-monthly-container">
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-    <span class="pill-tag pill-mint">
-      <span class="material-symbols-outlined" style="font-size: 14px;">account_balance</span>
-      Liquid Reserves
+    <span class="pill-tag pill-gold">
+      <span class="material-symbols-outlined" style="font-size: 14px;">analytics</span>
+      Executive Monthly Digest
     </span>
-    <span class="pill-tag pill-gold" style="font-family: var(--font-mono);">3 Accounts</span>
+    <span class="pill-tag pill-mint" style="font-family: var(--font-mono);">August 2026</span>
   </div>
 
   <div style="margin-top: 16px;">
-    <div class="metric-value">₹1,245,000.00</div>
-    <div class="metric-subtitle">Total Available Cash & Liquid Assets</div>
+    <div class="metric-value">₹637.00</div>
+    <div class="metric-subtitle">Total Spent in August 2026 Billing Cycle</div>
   </div>
 
-  <!-- Emergency Reserve Progress Bar -->
+  <!-- Budget Meter -->
+  
+  
   <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600;">
-      <span style="color: var(--on-surface);">Emergency Fund Target</span>
-      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹1,500,000</span>
+      <span style="color: var(--on-surface);">Monthly Budget Utilization</span>
+      <span style="color: var(--secondary-gold); font-family: var(--font-mono);">₹637 / ₹50,000</span>
     </div>
     <div class="progress-bar-container">
-      <div class="progress-bar-fill" style="width: 83%; background: linear-gradient(90deg, var(--soft-mint), #0b966d);"></div>
+      <div class="progress-bar-fill" style="width: 1.3%; background: linear-gradient(90deg, var(--soft-mint), var(--secondary-gold));"></div>
     </div>
     <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--on-surface-variant);">
-      <span>83% Funded</span>
-      <span>6 Months Buffer</span>
+      <span>1.3% Budget Used</span>
+      <span>₹49,363 Unspent Buffer</span>
     </div>
   </div>
 
-  <!-- Account Breakdown List -->
-  <div class="item-list" style="margin-top: 16px;">
-    
-    <div class="item-row">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
-          <span class="material-symbols-outlined" style="font-size: 18px;">
-            account_balance
-            
-          </span>
+  <!-- Key Metrics 2-column Grid -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px;">
+    <div style="background-color: var(--surface-container); padding: 12px; border-radius: 12px; border: 1px solid var(--outline-subtle);">
+      <div style="font-size: 11px; color: var(--on-surface-variant);">Total Liquid Reserves</div>
+      <div style="font-size: 16px; font-weight: 700; color: var(--soft-mint); margin-top: 4px; font-family: var(--font-mono);">₹1,245,000</div>
+    </div>
+    <div style="background-color: var(--surface-container); padding: 12px; border-radius: 12px; border: 1px solid var(--outline-subtle);">
+      <div style="font-size: 11px; color: var(--on-surface-variant);">Top Expense Category</div>
+      <div style="font-size: 15px; font-weight: 700; color: var(--on-surface); margin-top: 4px;">Eating Out</div>
+    </div>
+  </div>
+
+  <!-- Category Distribution List -->
+  <div style="margin-top: 20px;">
+    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--on-surface-variant); margin-bottom: 10px;">
+      Top Category Distribution
+    </div>
+    <div class="item-list" style="margin-top: 0;">
+      
+      
+      <div class="item-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="item-label">Eating Out</span>
+          <span class="item-amount">₹182.00 (28.6%)</span>
         </div>
-        <div>
-          <div class="item-label">HDFC Savings Account</div>
-          <div class="item-sublabel">Primary Bank</div>
+        <div class="progress-bar-container" style="height: 4px; margin-top: 0;">
+          <div class="progress-bar-fill" style="width: 28.6%; background-color: var(--soft-mint);"></div>
         </div>
       </div>
-      <div class="item-amount">₹450,000.00</div>
-    </div>
-    
-    <div class="item-row">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
-          <span class="material-symbols-outlined" style="font-size: 18px;">
-            credit_card
-            
-          </span>
+      
+      
+      <div class="item-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="item-label">Groceries</span>
+          <span class="item-amount">₹255.00 (40.0%)</span>
         </div>
-        <div>
-          <div class="item-label">ICICI Direct Account</div>
-          <div class="item-sublabel">Secondary Bank</div>
+        <div class="progress-bar-container" style="height: 4px; margin-top: 0;">
+          <div class="progress-bar-fill" style="width: 40.0%; background-color: var(--soft-mint);"></div>
         </div>
       </div>
-      <div class="item-amount">₹295,000.00</div>
-    </div>
-    
-    <div class="item-row">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
-          <span class="material-symbols-outlined" style="font-size: 18px;">
-            savings
-            
-          </span>
+      
+      
+      <div class="item-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="item-label">Shopping</span>
+          <span class="item-amount">₹200.00 (31.4%)</span>
         </div>
-        <div>
-          <div class="item-label">Emergency Cash Fund</div>
-          <div class="item-sublabel">Liquid Buffer</div>
+        <div class="progress-bar-container" style="height: 4px; margin-top: 0;">
+          <div class="progress-bar-fill" style="width: 31.4%; background-color: var(--soft-mint);"></div>
         </div>
       </div>
-      <div class="item-amount">₹500,000.00</div>
+      
     </div>
-    
   </div>
 </div>
 

@@ -33,27 +33,53 @@ logger = logging.getLogger(__name__)
 
 # ── Static command handlers ───────────────────────────────────────────────────
 
+from telegram import ReplyKeyboardMarkup, KeyboardButton
+
+
+def get_main_reply_keyboard() -> ReplyKeyboardMarkup:
+    """Return persistent 2x2 bottom menu keyboard for 1-tap command execution."""
+    return ReplyKeyboardMarkup(
+        [
+            [KeyboardButton("💳 Liquid Balance"), KeyboardButton("📊 Monthly Spending")],
+            [KeyboardButton("📈 Investment Portfolio"), KeyboardButton("🌆 Daily Digest")],
+        ],
+        resize_keyboard=True,
+        is_persistent=True
+    )
+
+
 @allowed_only
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /start — welcome message."""
-    await update.effective_message.reply_text(
-        "👋 *Welcome to FinOS Bot!*\n\n"
-        "Your personal finance assistant — always in your pocket.\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━\n"
-        "💸 *Log an expense:*\n"
-        "   Just type naturally:\n"
-        "   _\"spent 350 at Zomato\"_\n"
-        "   _\"uber 180\"_\n"
-        "   _\"groceries 1500 at DMart\"_\n\n"
-        "📊 *Commands:*\n"
-        "   /balance    — Liquid savings overview\n"
-        "   /spending   — This month's spending\n"
-        "   /portfolio  — Investment overview\n"
-        "   /undo       — Delete last expense\n"
-        "   /help       — Full command list\n"
-        "━━━━━━━━━━━━━━━━━━━━━",
-        parse_mode="Markdown",
+    from pathlib import Path
+    assets_img = Path(__file__).parent / "Assets" / "StartMessageImage.webp"
+
+    welcome_msg = (
+        "*Welcome to FinOS Bot!* 🚀\n\n"
+        "Your personal finance assistant — always in your pocket, ready to help you track and optimize your money.\n\n"
+        "⚡️ *How to Log an Expense*\n"
+        "I understand natural language! Just type it naturally:\n\n"
+        "_\"spent 350 at Zomato\"_\n\n"
+        "_\"uber 180\"_\n\n"
+        "_\"groceries 1500 at DMart\"_\n\n"
+        "🛠 *Quick Menu*\n"
+        "Tap any button below to manage your finances:"
     )
+
+    if assets_img.exists():
+        with open(assets_img, "rb") as photo_file:
+            await update.effective_message.reply_photo(
+                photo=photo_file,
+                caption=welcome_msg,
+                parse_mode="Markdown",
+                reply_markup=get_main_reply_keyboard()
+            )
+    else:
+        await update.effective_message.reply_text(
+            welcome_msg,
+            parse_mode="Markdown",
+            reply_markup=get_main_reply_keyboard()
+        )
 
 
 @allowed_only
@@ -86,18 +112,40 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
+from datetime import time
+from bot.handlers.digest import digest_command, scheduled_daily_digest_job, scheduled_monthly_digest_job
+
+
 async def post_init(application: Application) -> None:
-    """Set bot command list visible in Telegram UI."""
+    """Set bot command list visible in Telegram UI and schedule push jobs."""
     commands = [
         BotCommand("start", "Welcome & quick guide"),
         BotCommand("help", "Full command reference"),
         BotCommand("balance", "Liquid savings overview"),
         BotCommand("spending", "Monthly spending breakdown"),
         BotCommand("portfolio", "Investment portfolio overview"),
+        BotCommand("digest", "Daily & Monthly Push Intelligence Digest"),
         BotCommand("undo", "Delete last logged expense"),
     ]
     await application.bot.set_my_commands(commands)
     logger.info("Bot commands registered.")
+
+    # Schedule Automated Push Intelligence Jobs
+    if application.job_queue:
+        # Daily Push Digest at 21:00 (9:00 PM)
+        application.job_queue.run_daily(
+            scheduled_daily_digest_job,
+            time=time(21, 0, 0),
+            name="daily_push_digest"
+        )
+        # Monthly Executive Digest on 24th at 09:00 AM
+        application.job_queue.run_monthly(
+            scheduled_monthly_digest_job,
+            when=time(9, 0, 0),
+            day=24,
+            name="monthly_push_digest"
+        )
+        logger.info("🚀 Push Intelligence Job Queue scheduled! (Daily: 21:00, Monthly: 24th 09:00)")
 
     if not ALLOWED_CHAT_IDS:
         logger.warning(
@@ -121,16 +169,24 @@ def main() -> None:
     # Register the expense conversation (must be before catch-all handlers)
     app.add_handler(build_expense_conversation())
 
+    from telegram.ext import CallbackQueryHandler
+    from bot.handlers.spending import callback_open_month_picker, callback_select_spending_month
+
     # Static commands
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("balance", balance_command))
     app.add_handler(CommandHandler("spending", spending_command))
     app.add_handler(CommandHandler("portfolio", portfolio_command))
+    app.add_handler(CommandHandler("digest", digest_command))
     app.add_handler(CommandHandler("undo", undo_command))
 
-    logger.info("All handlers registered. Starting polling…")
-    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+    # Inline Keyboard Callbacks for Month Picker
+    app.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
+    app.add_handler(CallbackQueryHandler(callback_select_spending_month, pattern="^spend_month:"))
+
+    logger.info("Starting polling...")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
