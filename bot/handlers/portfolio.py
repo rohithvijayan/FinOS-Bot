@@ -64,6 +64,23 @@ async def portfolio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             for b in (bond_res.data or [])
         ]
 
+        tot_val = summary.get("current_value", 0) or sum(s.get("current_value", 0) for s in sips) + sum(b.get("current_value", 0) for b in bonds)
+        sip_tot = summary.get("monthly_sip", 0) or sum(s.get("monthly_sip", 0) for s in sips if s.get("active") == "Yes")
+        asset_alloc = [
+            {"name": "Mutual Funds & SIPs", "amount": sum(s.get("current_value", 0) for s in sips), "pct": round(sum(s.get("current_value", 0) for s in sips) / tot_val * 100, 1) if tot_val > 0 else 0},
+            {"name": "Bonds & Debt", "amount": sum(b.get("current_value", 0) for b in bonds), "pct": round(sum(b.get("current_value", 0) for b in bonds) / tot_val * 100, 1) if tot_val > 0 else 0}
+        ]
+        sip_list = [{"name": s.get("name"), "amount": s.get("monthly_sip")} for s in sips if s.get("monthly_sip", 0) > 0]
+
+        from bot.utils.html_renderer import render_portfolio_card
+        render_portfolio_card(
+            total_portfolio=tot_val,
+            asset_allocation=asset_alloc,
+            sips=sip_list,
+            growth_pct=str(summary.get("return_pct", 2.4)),
+            total_sip_amount=sip_tot
+        )
+
         msg = build_portfolio_message(summary, sips, bonds)
         await update.effective_message.reply_text(msg, parse_mode="Markdown")
 

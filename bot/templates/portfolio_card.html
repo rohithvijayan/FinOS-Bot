@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Investment Portfolio - FinOS{% endblock %}
+{% block timestamp %}Live Valuation{% endblock %}
+
+{% block content %}
+<div class="portfolio-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    <span class="pill-tag pill-mint">
+      <span class="material-symbols-outlined" style="font-size: 14px;">trending_up</span>
+      Net Portfolio
+    </span>
+    <span class="pill-tag pill-mint" style="font-family: var(--font-mono);">+{{ growth_pct|default('2.4') }}% MoM</span>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="metric-value">₹{{ "{:,.2f}".format(total_portfolio) }}</div>
+    <div class="metric-subtitle">Investments, SIPs & Sovereign Assets</div>
+  </div>
+
+  <!-- Asset Allocation Breakdown -->
+  <div style="margin-top: 20px;">
+    <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--on-surface-variant); margin-bottom: 12px;">
+      Asset Distribution
+    </div>
+
+    <div class="item-list" style="margin-top: 0;">
+      {% for asset in asset_allocation %}
+      <div class="item-row">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--secondary-gold);">
+            <span class="material-symbols-outlined" style="font-size: 18px;">
+              {% if 'Mutual' in asset.name %}monitoring
+              {% elif 'Equity' in asset.name %}show_chart
+              {% elif 'Gold' in asset.name %}workspace_premium
+              {% else %}account_balance_wallet{% endif %}
+            </span>
+          </div>
+          <div>
+            <div class="item-label">{{ asset.name }}</div>
+            <div class="item-sublabel">{{ asset.pct }}% of Total Assets</div>
+          </div>
+        </div>
+        <div class="item-amount">₹{{ "{:,.2f}".format(asset.amount) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Active SIPs Block -->
+  {% if sips %}
+  <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; margin-bottom: 8px;">
+      <span style="color: var(--on-surface);">Active Monthly SIPs</span>
+      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹{{ "{:,.0f}".format(total_sip_amount|default(35000)) }}/mo</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      {% for sip in sips %}
+      <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--on-surface-variant);">
+        <span>{{ sip.name }}</span>
+        <span style="font-family: var(--font-mono); color: var(--on-surface);">₹{{ "{:,.0f}".format(sip.amount) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

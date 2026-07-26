@@ -33,6 +33,7 @@ from bot.gemini_client import parse_expense
 from bot.supabase_client import supabase
 from bot.utils.categories import UI_CATEGORIES, CATEGORY_ICONS
 from bot.utils.formatters import build_expense_preview, fmt_inr
+from bot.utils.html_renderer import render_expense_card
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,16 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Store pending expense in user context
     context.user_data[_PENDING_KEY] = parsed
+
+    # Render HTML preview card
+    render_expense_card(
+        amount=parsed["amount"],
+        category=parsed["category"],
+        merchant=parsed["description"],
+        billing_month=_get_billing_month(parsed["date"]),
+        date=parsed["date"],
+        is_confirmed=False
+    )
 
     preview = build_expense_preview(
         amount=parsed["amount"],

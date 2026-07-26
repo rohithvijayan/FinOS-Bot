@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liquid Savings & Balance - FinOS</title>
+  <!-- Google Fonts: Hanken Grotesk & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <style>
+    :root {
+      /* Obsidian Precision Dark Mode Tokens */
+      --surface: #131313;
+      --surface-container-lowest: #0e0e0e;
+      --surface-container-low: #1b1b1c;
+      --surface-container: #202020;
+      --surface-container-high: #2a2a2a;
+      --surface-container-highest: #353535;
+
+      --on-surface: #e5e2e1;
+      --on-surface-variant: #c4c7c7;
+
+      --primary: #e5e2e1;
+      --soft-mint: #73d9b5;
+      --mint-glow: rgba(115, 217, 181, 0.15);
+      --secondary-gold: #ffb779;
+      --gold-glow: rgba(255, 183, 121, 0.15);
+      --soft-coral: #ffb4ab;
+      --coral-glow: rgba(255, 180, 171, 0.15);
+
+      --outline: #444748;
+      --outline-subtle: rgba(255, 255, 255, 0.08);
+
+      --font-sans: 'Hanken Grotesk', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--surface);
+      color: var(--on-surface);
+      font-family: var(--font-sans);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .telegram-card {
+      width: 100%;
+      max-width: 420px;
+      background-color: var(--surface-container-low);
+      border: 1px solid var(--outline-subtle);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .telegram-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--soft-mint), var(--secondary-gold));
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid var(--outline);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--soft-mint);
+      font-size: 16px;
+    }
+
+    .brand-name {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+    }
+
+    .timestamp-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--on-surface-variant);
+      background-color: var(--surface-container);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      border: 1px solid var(--outline-subtle);
+    }
+
+    .metric-value {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--on-surface);
+      line-height: 1.1;
+
+    }
+
+    .metric-subtitle {
+      font-size: 13px;
+      color: var(--on-surface-variant);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .pill-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .pill-mint {
+      background-color: var(--mint-glow);
+      color: var(--soft-mint);
+      border: 1px solid rgba(115, 217, 181, 0.3);
+    }
+
+    .pill-gold {
+      background-color: var(--gold-glow);
+      color: var(--secondary-gold);
+      border: 1px solid rgba(255, 183, 121, 0.3);
+    }
+
+    .pill-coral {
+      background-color: var(--coral-glow);
+      color: var(--soft-coral);
+      border: 1px solid rgba(255, 180, 171, 0.3);
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background-color: var(--surface-container-highest);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background-color: var(--surface-container);
+      border-radius: 12px;
+      border: 1px solid var(--outline-subtle);
+    }
+
+    .item-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--on-surface);
+    }
+
+    .item-sublabel {
+      font-size: 11px;
+      color: var(--on-surface-variant);
+      margin-top: 2px;
+    }
+
+    .item-amount {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--on-surface);
+      text-align: right;
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .telegram-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1px solid var(--outline-subtle);
+      background-color: var(--surface-container);
+      color: var(--on-surface);
+      transition: all 0.2s ease;
+    }
+
+    .telegram-btn-primary {
+      background-color: var(--mint-glow);
+      color: var(--soft-mint);
+      border-color: rgba(115, 217, 181, 0.4);
+    }
+
+    .telegram-btn-danger {
+      background-color: var(--coral-glow);
+      color: var(--soft-coral);
+      border-color: rgba(255, 180, 171, 0.4);
+    }
+  </style>
+  
+</head>
+<body>
+  <div class="telegram-card">
+    <div class="card-header">
+      <div class="brand-badge">
+        <div class="brand-logo">
+          <span class="material-symbols-outlined" style="font-size:18px;">account_balance_wallet</span>
+        </div>
+        <span class="brand-name">FinOS</span>
+      </div>
+      <div class="timestamp-pill">Real-time Sync</div>
+    </div>
+
+    
+<div class="balance-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    <span class="pill-tag pill-mint">
+      <span class="material-symbols-outlined" style="font-size: 14px;">account_balance</span>
+      Liquid Reserves
+    </span>
+    <span class="pill-tag pill-gold" style="font-family: var(--font-mono);">3 Accounts</span>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="metric-value">₹1,245,000.00</div>
+    <div class="metric-subtitle">Total Available Cash & Liquid Assets</div>
+  </div>
+
+  <!-- Emergency Reserve Progress Bar -->
+  <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600;">
+      <span style="color: var(--on-surface);">Emergency Fund Target</span>
+      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹1,500,000</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" style="width: 83%; background: linear-gradient(90deg, var(--soft-mint), #0b966d);"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--on-surface-variant);">
+      <span>83% Funded</span>
+      <span>6 Months Buffer</span>
+    </div>
+  </div>
+
+  <!-- Account Breakdown List -->
+  <div class="item-list" style="margin-top: 16px;">
+    
+    <div class="item-row">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
+          <span class="material-symbols-outlined" style="font-size: 18px;">
+            account_balance
+            
+          </span>
+        </div>
+        <div>
+          <div class="item-label">HDFC Savings Account</div>
+          <div class="item-sublabel">Primary Bank</div>
+        </div>
+      </div>
+      <div class="item-amount">₹450,000.00</div>
+    </div>
+    
+    <div class="item-row">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
+          <span class="material-symbols-outlined" style="font-size: 18px;">
+            credit_card
+            
+          </span>
+        </div>
+        <div>
+          <div class="item-label">ICICI Direct Account</div>
+          <div class="item-sublabel">Secondary Bank</div>
+        </div>
+      </div>
+      <div class="item-amount">₹295,000.00</div>
+    </div>
+    
+    <div class="item-row">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
+          <span class="material-symbols-outlined" style="font-size: 18px;">
+            savings
+            
+          </span>
+        </div>
+        <div>
+          <div class="item-label">Emergency Cash Fund</div>
+          <div class="item-sublabel">Liquid Buffer</div>
+        </div>
+      </div>
+      <div class="item-amount">₹500,000.00</div>
+    </div>
+    
+  </div>
+</div>
+
+  </div>
+</body>
+</html>

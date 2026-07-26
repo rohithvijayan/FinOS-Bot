@@ -144,12 +144,25 @@ async def spending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             if d and start_date <= d <= end_date:
                 expenses.append(exp)
 
-        # Fetch all budgets for comparison
-        bud_res = supabase.table("budgets").select("*").execute()
-        budgets: dict[str, float] = {
-            b["category"]: float(b.get("limit_amount", 0))
-            for b in (bud_res.data or [])
-        }
+        # Group expenses by category for HTML renderer
+        by_cat: dict[str, float] = {}
+        total_sp = 0.0
+        for exp in expenses:
+            amt = float(exp.get("amount", 0))
+            cat = exp.get("category", "Others")
+            by_cat[cat] = by_cat.get(cat, 0.0) + amt
+            total_sp += amt
+
+        categories_list = [{"name": k, "amount": v} for k, v in by_cat.items()]
+
+        from bot.utils.html_renderer import render_spending_card
+        render_spending_card(
+            month=month_label,
+            total_spent=total_sp,
+            categories=categories_list,
+            monthly_budget=sum(budgets.values()) if budgets else 50000.0,
+            date_range=f"{start_date.strftime('%d %b')} - {end_date.strftime('%d %b')}"
+        )
 
         msg = build_spending_message(month_label, expenses, budgets)
         await update.effective_message.reply_text(msg, parse_mode="Markdown")

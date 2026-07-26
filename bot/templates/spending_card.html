@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Spending Summary - FinOS{% endblock %}
+{% block timestamp %}{{ date_range|default('25 Jul - 24 Aug') }}{% endblock %}
+
+{% block content %}
+<div class="spending-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    <span class="pill-tag pill-gold">
+      <span class="material-symbols-outlined" style="font-size: 14px;">pie_chart</span>
+      Monthly Spending
+    </span>
+    <span class="pill-tag pill-mint" style="font-family: var(--font-mono);">{{ month }}</span>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="metric-value">₹{{ "{:,.2f}".format(total_spent) }}</div>
+    <div class="metric-subtitle">
+      Billing Cycle Spending (25th Cutoff Rule)
+    </div>
+  </div>
+
+  <!-- Monthly Budget Progress Meter -->
+  {% set budget = monthly_budget|default(50000) %}
+  {% set budget_pct = ((total_spent / budget) * 100)|round(1) %}
+  <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600;">
+      <span style="color: var(--on-surface);">Monthly Budget Usage</span>
+      <span style="color: var(--secondary-gold); font-family: var(--font-mono);">₹{{ "{:,.0f}".format(total_spent) }} / ₹{{ "{:,.0f}".format(budget) }}</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" style="width: {{ budget_pct if budget_pct <= 100 else 100 }}%; background: linear-gradient(90deg, var(--soft-mint), var(--secondary-gold));"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--on-surface-variant);">
+      <span>{{ budget_pct }}% of Monthly Cap</span>
+      <span>₹{{ "{:,.0f}".format(budget - total_spent) }} Remaining</span>
+    </div>
+  </div>
+
+  <!-- Category Breakdown List -->
+  <div style="margin-top: 20px;">
+    <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--on-surface-variant); margin-bottom: 12px;">
+      Category Breakdown ({{ categories|length }})
+    </div>
+    <div class="item-list" style="margin-top: 0;">
+      {% for cat in categories %}
+      {% set cat_pct = ((cat.amount / total_spent) * 100)|round(1) if total_spent > 0 else 0 %}
+      <div class="item-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--soft-mint);">
+              {% if cat.name == 'Eating Out' %}restaurant
+              {% elif cat.name == 'Groceries' %}shopping_bag
+              {% elif cat.name == 'Bills' %}receipt_long
+              {% elif cat.name == 'Shopping' %}local_mall
+              {% else %}category{% endif %}
+            </span>
+            <span class="item-label">{{ cat.name }}</span>
+          </div>
+          <div class="item-amount">₹{{ "{:,.2f}".format(cat.amount) }}</div>
+        </div>
+        <div class="progress-bar-container" style="height: 4px; margin-top: 0;">
+          <div class="progress-bar-fill" style="width: {{ cat_pct }}%; background-color: var(--soft-mint);"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

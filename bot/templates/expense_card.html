@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Expense Confirmation - FinOS{% endblock %}
+{% block timestamp %}{{ date }}{% endblock %}
+
+{% block content %}
+<div class="expense-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    <span class="pill-tag pill-mint">
+      <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+      {% if is_confirmed %}Logged Expense{% else %}Confirm Expense{% endif %}
+    </span>
+    <span class="pill-tag pill-gold" style="font-family: var(--font-mono);">{{ billing_month }}</span>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="metric-value">₹{{ "%.2f"|format(amount|float) if amount is number else amount }}</div>
+    <div class="metric-subtitle">
+      <strong style="color: var(--on-surface);">{{ merchant }}</strong>
+    </div>
+  </div>
+
+  <div class="item-list" style="margin-top: 20px;">
+    <div class="item-row">
+      <div>
+        <div class="item-label">Category</div>
+        <div class="item-sublabel">Mapped from merchant</div>
+      </div>
+      <div class="item-amount" style="color: var(--soft-mint);">
+        {{ category }}
+      </div>
+    </div>
+
+    <div class="item-row">
+      <div>
+        <div class="item-label">Billing Cycle</div>
+        <div class="item-sublabel">25th to 24th Cutoff</div>
+      </div>
+      <div class="item-amount" style="color: var(--on-surface-variant);">
+        {{ billing_month }}
+      </div>
+    </div>
+
+    {% if account %}
+    <div class="item-row">
+      <div>
+        <div class="item-label">Payment Source</div>
+        <div class="item-sublabel">Linked Account</div>
+      </div>
+      <div class="item-amount">
+        {{ account }}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if not is_confirmed %}
+  <div class="action-buttons">
+    <div class="telegram-btn telegram-btn-primary">
+      <span class="material-symbols-outlined" style="font-size: 16px;">done</span> Save
+    </div>
+    <div class="telegram-btn">
+      <span class="material-symbols-outlined" style="font-size: 16px;">edit</span> Category
+    </div>
+    <div class="telegram-btn telegram-btn-danger">
+      <span class="material-symbols-outlined" style="font-size: 16px;">close</span> Cancel
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

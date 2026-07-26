@@ -14,6 +14,7 @@ from telegram.ext import ContextTypes
 from bot.handlers.auth import allowed_only
 from bot.supabase_client import supabase
 from bot.utils.formatters import build_balance_message, fmt_inr
+from bot.utils.html_renderer import render_balance_card
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             }
             for a in accounts
         ]
+
+        total_liq = sum(a["balance"] for a in normalised)
+        render_balance_card(total_liquid=total_liq, accounts=normalised)
 
         msg = build_balance_message(normalised)
         await update.effective_message.reply_text(msg, parse_mode="Markdown")

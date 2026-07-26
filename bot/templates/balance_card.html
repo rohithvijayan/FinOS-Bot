@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Liquid Savings & Balance - FinOS{% endblock %}
+{% block timestamp %}Real-time Sync{% endblock %}
+
+{% block content %}
+<div class="balance-container">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    <span class="pill-tag pill-mint">
+      <span class="material-symbols-outlined" style="font-size: 14px;">account_balance</span>
+      Liquid Reserves
+    </span>
+    <span class="pill-tag pill-gold" style="font-family: var(--font-mono);">{{ accounts|length }} Accounts</span>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="metric-value">₹{{ "{:,.2f}".format(total_liquid) }}</div>
+    <div class="metric-subtitle">Total Available Cash & Liquid Assets</div>
+  </div>
+
+  <!-- Emergency Reserve Progress Bar -->
+  <div style="margin-top: 20px; background-color: var(--surface-container); padding: 14px; border-radius: 14px; border: 1px solid var(--outline-subtle);">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600;">
+      <span style="color: var(--on-surface);">Emergency Fund Target</span>
+      <span style="color: var(--soft-mint); font-family: var(--font-mono);">₹{{ "{:,.0f}".format(emergency_target|default(1000000)) }}</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" style="width: {{ emergency_pct|default(85) }}%; background: linear-gradient(90deg, var(--soft-mint), #0b966d);"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--on-surface-variant);">
+      <span>{{ emergency_pct|default(85) }}% Funded</span>
+      <span>6 Months Buffer</span>
+    </div>
+  </div>
+
+  <!-- Account Breakdown List -->
+  <div class="item-list" style="margin-top: 16px;">
+    {% for acc in accounts %}
+    <div class="item-row">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; background-color: var(--surface-container-high); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--soft-mint);">
+          <span class="material-symbols-outlined" style="font-size: 18px;">
+            {% if 'HDFC' in acc.name %}account_balance
+            {% elif 'ICICI' in acc.name %}credit_card
+            {% elif 'Emergency' in acc.name %}savings
+            {% else %}payments{% endif %}
+          </span>
+        </div>
+        <div>
+          <div class="item-label">{{ acc.name }}</div>
+          <div class="item-sublabel">{{ acc.type|default('Savings Account') }}</div>
+        </div>
+      </div>
+      <div class="item-amount">₹{{ "{:,.2f}".format(acc.balance) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
