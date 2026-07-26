@@ -35,40 +35,6 @@ from bot.handlers.expense import undo_command
 import bot.config as config
 from bot.main import start_command, help_command, post_init
 
-# Global Application instance for serverless Vercel function
-_app_instance = None
-
-
-def get_telegram_app() -> Application:
-    global _app_instance
-    if _app_instance is None:
-        _app_instance = (
-            Application.builder()
-            .token(TELEGRAM_BOT_TOKEN)
-            .build()
-        )
-        from bot.handlers.copilot import (
-            copilot_command, copilot_quick_prompt, copilot_refresh,
-        )
-        _app_instance.add_handler(build_expense_conversation())
-        _app_instance.add_handler(CommandHandler("start", start_command))
-        _app_instance.add_handler(CommandHandler("help", help_command))
-        _app_instance.add_handler(CommandHandler("balance", balance_command))
-        _app_instance.add_handler(CommandHandler("spending", spending_command))
-        _app_instance.add_handler(CommandHandler("portfolio", portfolio_command))
-        _app_instance.add_handler(CommandHandler("digest", digest_command))
-        _app_instance.add_handler(CommandHandler("undo", undo_command))
-        _app_instance.add_handler(CommandHandler("copilot", copilot_command))
-        _app_instance.add_handler(MessageHandler(filters.Document.PDF, handle_pdf_document))
-        if config.ENABLE_COPILOT:
-            _app_instance.add_handler(CallbackQueryHandler(copilot_quick_prompt, pattern="^cop:(budget|portfolio|tips|networth)$"))
-            _app_instance.add_handler(CallbackQueryHandler(copilot_refresh,      pattern="^cop:refresh$"))
-        _app_instance.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
-        _app_instance.add_handler(CallbackQueryHandler(callback_select_spending_month, pattern="^spend_month:"))
-        _app_instance.add_handler(CallbackQueryHandler(callback_batch_save, pattern="^batch:save$"))
-        _app_instance.add_handler(CallbackQueryHandler(callback_batch_cancel, pattern="^batch:cancel$"))
-    return _app_instance
-
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -88,19 +54,39 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             update_data = json.loads(post_data.decode("utf-8"))
-            app = get_telegram_app()
-            
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
             
             async def process():
-                if not app._initialized:
-                    await app.initialize()
+                app = (
+                    Application.builder()
+                    .token(TELEGRAM_BOT_TOKEN)
+                    .build()
+                )
+                from bot.handlers.copilot import (
+                    copilot_command, copilot_quick_prompt, copilot_refresh,
+                )
+                app.add_handler(build_expense_conversation())
+                app.add_handler(CommandHandler("start", start_command))
+                app.add_handler(CommandHandler("help", help_command))
+                app.add_handler(CommandHandler("balance", balance_command))
+                app.add_handler(CommandHandler("spending", spending_command))
+                app.add_handler(CommandHandler("portfolio", portfolio_command))
+                app.add_handler(CommandHandler("digest", digest_command))
+                app.add_handler(CommandHandler("undo", undo_command))
+                app.add_handler(CommandHandler("copilot", copilot_command))
+                app.add_handler(MessageHandler(filters.Document.PDF, handle_pdf_document))
+                if config.ENABLE_COPILOT:
+                    app.add_handler(CallbackQueryHandler(copilot_quick_prompt, pattern="^cop:(budget|portfolio|tips|networth)$"))
+                    app.add_handler(CallbackQueryHandler(copilot_refresh,      pattern="^cop:refresh$"))
+                app.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
+                app.add_handler(CallbackQueryHandler(callback_select_spending_month, pattern="^spend_month:"))
+                app.add_handler(CallbackQueryHandler(callback_batch_save, pattern="^batch:save$"))
+                app.add_handler(CallbackQueryHandler(callback_batch_cancel, pattern="^batch:cancel$"))
+
+                await app.initialize()
                 update = Update.de_json(update_data, app.bot)
                 await app.process_update(update)
 
-            loop.run_until_complete(process())
-            loop.close()
+            asyncio.run(process())
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
