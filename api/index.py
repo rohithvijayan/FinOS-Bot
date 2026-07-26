@@ -54,7 +54,7 @@ def get_telegram_app() -> Application:
         _app_instance.add_handler(CommandHandler("portfolio", portfolio_command))
         _app_instance.add_handler(CommandHandler("digest", digest_command))
         _app_instance.add_handler(CommandHandler("undo", undo_command))
-        _app_instance.add_handler(MessageHandler(filters.Document.MIMEType("application/pdf"), handle_pdf_document))
+        _app_instance.add_handler(MessageHandler(filters.Document.PDF, handle_pdf_document))
         _app_instance.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
         _app_instance.add_handler(CallbackQueryHandler(callback_select_spending_month, pattern="^spend_month:"))
         _app_instance.add_handler(CallbackQueryHandler(callback_batch_save, pattern="^batch:save$"))
