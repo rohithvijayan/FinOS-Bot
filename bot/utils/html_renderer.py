@@ -19,22 +19,74 @@ env = Environment(
 def _ensure_previews_dir():
     PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
 
-def html_to_image(html_file_name: str, img_file_name: str, size=(460, 620)) -> Path | None:
-    """Convert a generated HTML file in PREVIEWS_DIR to a PNG card image."""
+def _html_to_png_weasyprint(html_path: Path, img_path: Path, size=(460, 620)) -> bool:
+    """Render HTML → PDF via WeasyPrint, then PDF → PNG via pdf2image (no Chrome needed)."""
+    try:
+        from weasyprint import HTML as WeasyHTML
+        from pdf2image import convert_from_bytes
+
+        width_px, height_px = size
+        # WeasyPrint uses CSS page sizing (1px ≈ 0.75pt, 96dpi default)
+        # We set the page size to match our card width
+        css_override = f"@page {{ margin:0; size:{width_px}px {height_px}px; }}"
+        from weasyprint import CSS
+
+        html_str = html_path.read_text(encoding="utf-8")
+        pdf_bytes = WeasyHTML(string=html_str, base_url=str(html_path.parent)).write_pdf(
+            stylesheets=[CSS(string=css_override)]
+        )
+        images = convert_from_bytes(pdf_bytes, dpi=150, first_page=1, last_page=1)
+        if images:
+            # Crop/resize to desired output dimensions
+            img = images[0]
+            target_w = width_px * 2  # dpi=150 → 150/72 * px ≈ 2x
+            img = img.resize((target_w, int(img.height * target_w / img.width)))
+            img.save(str(img_path), "PNG", optimize=True)
+            logger.info(f"WeasyPrint rendered {img_path.name} ({img_path.stat().st_size // 1024} KB)")
+            return True
+        return False
+    except Exception as exc:
+        logger.warning(f"WeasyPrint rendering failed: {exc}")
+        return False
+
+
+def _html_to_png_html2image(html_path: Path, img_path: Path, size=(460, 620)) -> bool:
+    """Fallback: render HTML → PNG via html2image (requires Chrome/Chromium)."""
     try:
         from html2image import Html2Image
-        _ensure_previews_dir()
-        html_path = PREVIEWS_DIR / html_file_name
-        if not html_path.exists():
-            return None
-        
-        hti = Html2Image(output_path=str(PREVIEWS_DIR))
-        hti.screenshot(html_file=str(html_path), save_as=img_file_name, size=size)
-        img_path = PREVIEWS_DIR / img_file_name
-        return img_path if img_path.exists() else None
+        chrome_path = os.getenv("CHROME_BIN") or os.getenv("BROWSER_PATH")
+        kwargs = {"output_path": str(img_path.parent)}
+        if chrome_path:
+            kwargs["browser_executable"] = chrome_path
+        hti = Html2Image(**kwargs)
+        hti.screenshot(html_file=str(html_path), save_as=img_path.name, size=size)
+        return img_path.exists()
     except Exception as exc:
-        logger.warning(f"Could not generate PNG image card via html2image: {exc}")
+        logger.warning(f"html2image rendering failed: {exc}")
+        return False
+
+
+def html_to_image(html_file_name: str, img_file_name: str, size=(460, 620)) -> Path | None:
+    """Convert a generated HTML file in PREVIEWS_DIR to a PNG card image.
+    
+    Tries WeasyPrint (no Chrome required) first, then falls back to html2image.
+    """
+    _ensure_previews_dir()
+    html_path = PREVIEWS_DIR / html_file_name
+    if not html_path.exists():
         return None
+    img_path = PREVIEWS_DIR / img_file_name
+
+    # Primary: WeasyPrint (works on Vercel serverless, no Chrome needed)
+    if _html_to_png_weasyprint(html_path, img_path, size):
+        return img_path
+
+    # Fallback: html2image (requires Chrome, works on local/Docker)
+    if _html_to_png_html2image(html_path, img_path, size):
+        return img_path
+
+    logger.warning(f"All rendering backends failed for {html_file_name}")
+    return None
 
 def render_expense_card(amount, category, merchant, billing_month, date, account=None, is_confirmed=False, save_preview=True) -> tuple[str, Path | None]:
     template = env.get_template("expense_card.html")
