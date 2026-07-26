@@ -5,9 +5,11 @@ from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
 
+import tempfile
+
 # Path to templates directory
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-PREVIEWS_DIR = Path(__file__).parent.parent.parent / "previews"
+PREVIEWS_DIR = Path(tempfile.gettempdir()) / "finos_previews"
 
 env = Environment(
     loader=FileSystemLoader(str(TEMPLATES_DIR)),
