@@ -1,0 +1,5 @@
+python-telegram-bot==21.10
+supabase==2.15.2
+google-generativeai==0.8.4
+python-dotenv==1.1.1
+httpx==0.28.1
