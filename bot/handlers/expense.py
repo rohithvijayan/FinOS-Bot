@@ -141,10 +141,21 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await digest_command(update, context)
         return ConversationHandler.END
 
+    if text == "🤖 Copilot":
+        from bot.handlers.copilot import copilot_command
+        await copilot_command(update, context)
+        return ConversationHandler.END
+
+    # If Copilot session is active, route all non-expense text to the AI
+    if context.user_data.get("_copilot_system"):
+        from bot.handlers.copilot import copilot_message
+        await copilot_message(update, context)
+        return ConversationHandler.END
+
     if not _looks_like_expense(text):
         await update.effective_message.reply_text(
             "💬 I didn't detect an expense in that message.\n\n"
-            "Try: _\"spent 350 at Zomato\"_ or tap the menu buttons below.",
+            "Try: _\"spent 350 at Zomato\"_ or tap *🤖 Copilot* to chat with your finance AI.",
             parse_mode="Markdown",
         )
         return ConversationHandler.END

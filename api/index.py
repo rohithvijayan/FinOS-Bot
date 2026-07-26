@@ -46,6 +46,9 @@ def get_telegram_app() -> Application:
             .token(TELEGRAM_BOT_TOKEN)
             .build()
         )
+        from bot.handlers.copilot import (
+            copilot_command, copilot_quick_prompt, copilot_refresh,
+        )
         _app_instance.add_handler(build_expense_conversation())
         _app_instance.add_handler(CommandHandler("start", start_command))
         _app_instance.add_handler(CommandHandler("help", help_command))
@@ -54,7 +57,10 @@ def get_telegram_app() -> Application:
         _app_instance.add_handler(CommandHandler("portfolio", portfolio_command))
         _app_instance.add_handler(CommandHandler("digest", digest_command))
         _app_instance.add_handler(CommandHandler("undo", undo_command))
+        _app_instance.add_handler(CommandHandler("copilot", copilot_command))
         _app_instance.add_handler(MessageHandler(filters.Document.PDF, handle_pdf_document))
+        _app_instance.add_handler(CallbackQueryHandler(copilot_quick_prompt, pattern="^cop:(budget|portfolio|tips|networth)$"))
+        _app_instance.add_handler(CallbackQueryHandler(copilot_refresh,      pattern="^cop:refresh$"))
         _app_instance.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
         _app_instance.add_handler(CallbackQueryHandler(callback_select_spending_month, pattern="^spend_month:"))
         _app_instance.add_handler(CallbackQueryHandler(callback_batch_save, pattern="^batch:save$"))

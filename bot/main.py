@@ -37,11 +37,12 @@ from telegram import ReplyKeyboardMarkup, KeyboardButton
 
 
 def get_main_reply_keyboard() -> ReplyKeyboardMarkup:
-    """Return persistent 2x2 bottom menu keyboard for 1-tap command execution."""
+    """Return persistent bottom menu keyboard."""
     return ReplyKeyboardMarkup(
         [
-            [KeyboardButton("💳 Liquid Balance"), KeyboardButton("📊 Monthly Spending")],
-            [KeyboardButton("📈 Investment Portfolio"), KeyboardButton("🌆 Daily Digest")],
+            [KeyboardButton("💳 Liquid Balance"),       KeyboardButton("📊 Monthly Spending")],
+            [KeyboardButton("📈 Investment Portfolio"),  KeyboardButton("🌆 Daily Digest")],
+            [KeyboardButton("🤖 Copilot")],
         ],
         resize_keyboard=True,
         is_persistent=True
@@ -91,19 +92,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "Just send any message with an amount:\n"
         "  `spent 350 at Zomato`\n"
         "  `uber 180`\n"
-        "  `electricity bill 1200`\n"
-        "  `groceries 1500`\n\n"
-        "The bot will:\n"
-        "  1. Parse the amount & category\n"
-        "  2. Show a preview card\n"
-        "  3. Ask you to confirm before saving\n\n"
+        "  `electricity bill 1200`\n\n"
         "━━━━━ 📋 Queries ━━━━━\n"
         "/balance — Liquid savings breakdown\n"
         "/spending — Current month category breakdown\n"
-        "/spending July 2026 — Specific month\n"
-        "/portfolio — Full investment overview\n\n"
+        "/portfolio — Investment overview\n"
+        "/digest — Daily & Monthly digest\n\n"
+        "━━━━━ 🤖 AI Copilot ━━━━━\n"
+        "/copilot — Chat with your personal finance AI\n"
+        "Ask anything: \"Am I on budget?\", \"Which SIP is performing best?\"\n\n"
         "━━━━━ 🔧 Other ━━━━━\n"
-        "/undo — Delete the last logged expense\n"
+        "/undo — Delete last logged expense\n"
         "/start — Welcome message\n"
         "/help — This message",
         parse_mode="Markdown",
@@ -119,13 +118,14 @@ from bot.handlers.digest import digest_command, scheduled_daily_digest_job, sche
 async def post_init(application: Application) -> None:
     """Set bot command list visible in Telegram UI and schedule push jobs."""
     commands = [
-        BotCommand("start", "Welcome & quick guide"),
-        BotCommand("help", "Full command reference"),
-        BotCommand("balance", "Liquid savings overview"),
+        BotCommand("start",    "Welcome & quick guide"),
+        BotCommand("help",     "Full command reference"),
+        BotCommand("balance",  "Liquid savings overview"),
         BotCommand("spending", "Monthly spending breakdown"),
-        BotCommand("portfolio", "Investment portfolio overview"),
-        BotCommand("digest", "Daily & Monthly Push Intelligence Digest"),
-        BotCommand("undo", "Delete last logged expense"),
+        BotCommand("portfolio","Investment portfolio overview"),
+        BotCommand("digest",   "Daily & Monthly Push Intelligence Digest"),
+        BotCommand("copilot",  "Chat with your personal finance AI Copilot"),
+        BotCommand("undo",     "Delete last logged expense"),
     ]
     await application.bot.set_my_commands(commands)
     logger.info("Bot commands registered.")
@@ -180,6 +180,17 @@ def main() -> None:
     app.add_handler(CommandHandler("portfolio", portfolio_command))
     app.add_handler(CommandHandler("digest", digest_command))
     app.add_handler(CommandHandler("undo", undo_command))
+
+    from bot.handlers.copilot import (
+        copilot_command, copilot_message,
+        copilot_quick_prompt, copilot_refresh,
+    )
+
+    app.add_handler(CommandHandler("copilot", copilot_command))
+
+    # Inline keyboard callbacks for Copilot quick prompts
+    app.add_handler(CallbackQueryHandler(copilot_quick_prompt, pattern="^cop:(budget|portfolio|tips|networth)$"))
+    app.add_handler(CallbackQueryHandler(copilot_refresh,      pattern="^cop:refresh$"))
 
     # PDF Bank Statement Importer Document Handler
     from telegram.ext import filters, MessageHandler
