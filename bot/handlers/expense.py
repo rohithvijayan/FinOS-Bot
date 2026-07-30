@@ -511,5 +511,7 @@ def build_expense_conversation() -> ConversationHandler:
         ],
         per_user=True,
         per_chat=True,
+        name="expense_conversation",
+        persistent=True,
     )
 
