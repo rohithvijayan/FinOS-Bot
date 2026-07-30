@@ -19,7 +19,7 @@ from telegram.ext import (
 )
 from bot.config import TELEGRAM_BOT_TOKEN
 from bot.handlers.expense import (
-    build_expense_conversation,
+    get_expense_handlers,
     handle_pdf_document,
     callback_batch_save,
     callback_batch_cancel
@@ -69,7 +69,8 @@ class handler(BaseHTTPRequestHandler):
                 from bot.handlers.copilot import (
                     copilot_command, copilot_quick_prompt, copilot_refresh,
                 )
-                app.add_handler(build_expense_conversation())
+                for h in get_expense_handlers():
+                    app.add_handler(h)
                 app.add_handler(CommandHandler("start", start_command))
                 app.add_handler(CommandHandler("help", help_command))
                 app.add_handler(CommandHandler("balance", balance_command))

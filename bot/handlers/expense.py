@@ -5,11 +5,11 @@ Flow:
   1. User sends a text message (not a command).
   2. Bot checks if it looks like an expense (has an amount).
   3. Calls Gemini to parse → builds a preview card.
-  4. Presents inline keyboard: [✅ Save] [✏️ Edit category] [❌ Cancel]
-  5. On ✅ → inserts into Supabase `expenses` table.
+  4. Auto-saves to Supabase `expenses` table immediately!
+  5. Presents inline keyboard: [✏️ Change Category] [❌ Undo]
   6. On ✏️ → shows category selector buttons.
-  7. On ❌ → cancels silently.
-  8. /undo → deletes the last expense logged in this session.
+  7. On ❌ → deletes the expense from Supabase.
+  8. /undo → deletes the last expense logged.
 """
 from __future__ import annotations
 
@@ -22,7 +22,6 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
-    ConversationHandler,
     MessageHandler,
     CommandHandler,
     filters,
@@ -38,12 +37,7 @@ from bot.utils.html_renderer import render_expense_card
 
 logger = logging.getLogger(__name__)
 
-# ConversationHandler states
-AWAITING_CONFIRM = 1
-AWAITING_CATEGORY = 2
-
 # Context keys
-_PENDING_KEY = "pending_expense"
 _LAST_ID_KEY = "last_expense_id"
 
 # Regex to detect if a message likely contains an amount
@@ -78,17 +72,16 @@ def _get_billing_month(date_str: str) -> str:
         return f"{_MONTHS[today.month - 1]} {today.year}"
 
 
-def _confirm_keyboard() -> InlineKeyboardMarkup:
+def _confirm_keyboard(expense_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("✅ Save", callback_data="expense:save"),
-            InlineKeyboardButton("✏️ Change Category", callback_data="expense:edit_cat"),
-            InlineKeyboardButton("❌ Cancel", callback_data="expense:cancel"),
+            InlineKeyboardButton("✏️ Change Category", callback_data=f"exp:edit:{expense_id}"),
+            InlineKeyboardButton("❌ Undo", callback_data=f"exp:undo:{expense_id}"),
         ]
     ])
 
 
-def _category_keyboard() -> InlineKeyboardMarkup:
+def _category_keyboard(expense_id: str) -> InlineKeyboardMarkup:
     """Show all categories as 2-column button grid."""
     buttons = []
     cats = [c for c in UI_CATEGORIES]  # exclude 'Others' — added at end
@@ -96,16 +89,16 @@ def _category_keyboard() -> InlineKeyboardMarkup:
         row = []
         for cat in cats[i:i + 2]:
             icon = CATEGORY_ICONS.get(cat, "🏷️")
-            row.append(InlineKeyboardButton(f"{icon} {cat}", callback_data=f"cat:{cat}"))
+            row.append(InlineKeyboardButton(f"{icon} {cat}", callback_data=f"cat:{expense_id}:{cat}"))
         buttons.append(row)
     return InlineKeyboardMarkup(buttons)
 
 
 # ── Entry point: plain text message ─────────────────────────────────────────
 
-async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Triggered for all non-command text messages."""
-    # Auth check inline (decorator can't be used on ConversationHandler entry points directly)
+    # Auth check inline
     from bot.config import ALLOWED_CHAT_IDS
     chat_id = update.effective_chat.id
 
@@ -114,10 +107,10 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"⚠️ *Auth not configured!*\n\nAdd `ALLOWED_CHAT_ID={chat_id}` to your `.env` and restart.",
             parse_mode="Markdown",
         )
-        return ConversationHandler.END
+        return
 
     if chat_id not in ALLOWED_CHAT_IDS:
-        return ConversationHandler.END
+        return
 
     text = (update.effective_message.text or "").strip()
 
@@ -125,36 +118,36 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if text == "💳 Liquid Balance":
         from bot.handlers.balance import balance_command
         await balance_command(update, context)
-        return ConversationHandler.END
+        return
 
     if text == "📊 Monthly Spending":
         from bot.handlers.spending import spending_command
         await spending_command(update, context)
-        return ConversationHandler.END
+        return
 
     if text == "📈 Investment Portfolio":
         from bot.handlers.portfolio import portfolio_command
         await portfolio_command(update, context)
-        return ConversationHandler.END
+        return
 
     if text == "🌆 Daily Digest":
         from bot.handlers.digest import digest_command
         await digest_command(update, context)
-        return ConversationHandler.END
+        return
 
     if text == "🤖 Copilot":
         if not ENABLE_COPILOT:
             await update.effective_message.reply_text("⚠️ The AI Copilot feature is currently disabled.")
-            return ConversationHandler.END
+            return
         from bot.handlers.copilot import copilot_command
         await copilot_command(update, context)
-        return ConversationHandler.END
+        return
 
     # If Copilot session is active, route all non-expense text to the AI
     if ENABLE_COPILOT and context.user_data.get("_copilot_system"):
         from bot.handlers.copilot import copilot_message
         await copilot_message(update, context)
-        return ConversationHandler.END
+        return
 
     if not _looks_like_expense(text):
         fallback = "💬 I didn't detect an expense in that message.\n\nTry: _\"spent 350 at Zomato\"_"
@@ -164,7 +157,7 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             fallback,
             parse_mode="Markdown",
         )
-        return ConversationHandler.END
+        return
 
     thinking_msg = await update.effective_message.reply_text("🧠 Parsing your expense...")
 
@@ -175,19 +168,35 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             "❓ I couldn't find an amount in your message. Try: `spent 350 at Zomato`",
             parse_mode="Markdown",
         )
-        return ConversationHandler.END
+        return
 
-    # Store pending expense in user context
-    context.user_data[_PENDING_KEY] = parsed
+    month_label = _get_billing_month(parsed["date"])
+    row = {
+        "date": parsed["date"],
+        "description": parsed["description"],
+        "amount": parsed["amount"],
+        "category": parsed["category"],
+        "month": month_label,
+    }
+
+    try:
+        res = supabase.table("expenses").insert(row).execute()
+        inserted = res.data[0] if res.data else {}
+        expense_id = inserted.get("id")
+        context.user_data[_LAST_ID_KEY] = expense_id
+    except Exception as exc:
+        logger.exception("Failed to insert expense: %s", exc)
+        await thinking_msg.edit_text("❌ Failed to save expense. Check bot logs.")
+        return
 
     # Render HTML preview card & convert to PNG image
     _, img_path = render_expense_card(
         amount=parsed["amount"],
         category=parsed["category"],
         merchant=parsed["description"],
-        billing_month=_get_billing_month(parsed["date"]),
+        billing_month=month_label,
         date=parsed["date"],
-        is_confirmed=False
+        is_confirmed=True
     )
 
     preview = build_expense_preview(
@@ -203,128 +212,105 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await thinking_msg.delete()
 
+    reply_markup = _confirm_keyboard(expense_id)
+
     if img_path and img_path.exists():
         with open(img_path, "rb") as photo_file:
             await update.effective_message.reply_photo(
                 photo=photo_file,
-                caption=f"⚡ *Expense Detected*\n{preview}{confidence_note}",
+                caption=f"✅ *Auto-Saved*\n{preview}{confidence_note}",
                 parse_mode="Markdown",
-                reply_markup=_confirm_keyboard(),
+                reply_markup=reply_markup,
             )
     else:
         await update.effective_message.reply_text(
-            preview + confidence_note,
+            f"✅ *Auto-Saved*\n{preview}{confidence_note}",
             parse_mode="Markdown",
-            reply_markup=_confirm_keyboard(),
+            reply_markup=reply_markup,
         )
-    return AWAITING_CONFIRM
+
+    # Trigger Smart Budget Alerts & Threshold Guards
+    from bot.utils.budget_guard import check_category_budget_guard
+    await check_category_budget_guard(
+        category=parsed["category"],
+        billing_month=month_label,
+        context=context,
+        bot=context.bot,
+        chat_id=update.effective_chat.id
+    )
 
 
-# ── Callback: Save ───────────────────────────────────────────────────────────
+# ── Callback: Undo ───────────────────────────────────────────────────────────
 
-async def callback_save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """User pressed ✅ Save."""
+async def callback_undo_expense(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """User pressed ❌ Undo."""
     query = update.callback_query
     await query.answer()
-
-    pending = context.user_data.get(_PENDING_KEY)
-    if not pending:
-        await query.edit_message_text("⚠️ Expense data lost. Please try again.")
-        return ConversationHandler.END
-
-    month_label = _get_billing_month(pending["date"])
-
-    row = {
-        "date": pending["date"],
-        "description": pending["description"],
-        "amount": pending["amount"],
-        "category": pending["category"],
-        "month": month_label,
-    }
-
+    
+    expense_id = query.data.split(":")[2]
+    
     try:
-        res = supabase.table("expenses").insert(row).execute()
-        inserted = res.data[0] if res.data else {}
-        expense_id = inserted.get("id")
-        context.user_data[_LAST_ID_KEY] = expense_id
-
-        await query.edit_message_text(
-            f"✅ *Saved!*\n\n"
-            f"{fmt_inr(pending['amount'])} · {pending['category']} · {pending['description']}\n\n"
-            f"_Use /undo to delete this if you made a mistake._",
+        supabase.table("expenses").delete().eq("id", expense_id).execute()
+        await query.edit_message_caption(
+            caption="❌ *Expense deleted.*",
             parse_mode="Markdown",
-        )
-
-        # Trigger Smart Budget Alerts & Threshold Guards (75% / 90%)
-        from bot.utils.budget_guard import check_category_budget_guard
-        await check_category_budget_guard(
-            category=pending["category"],
-            billing_month=month_label,
-            context=context,
-            bot=context.bot,
-            chat_id=update.effective_chat.id
         )
     except Exception as exc:
-        logger.exception("Failed to insert expense: %s", exc)
-        await query.edit_message_text("❌ Failed to save. Check bot logs.")
-
-    context.user_data.pop(_PENDING_KEY, None)
-    return ConversationHandler.END
-
-
-# ── Callback: Cancel ─────────────────────────────────────────────────────────
-
-async def callback_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """User pressed ❌ Cancel."""
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("❌ Expense cancelled.")
-    context.user_data.pop(_PENDING_KEY, None)
-    return ConversationHandler.END
+        # If it's a text message without photo
+        try:
+            await query.edit_message_text(
+                "❌ *Expense deleted.*",
+                parse_mode="Markdown",
+            )
+        except Exception:
+            pass
 
 
 # ── Callback: Edit Category ──────────────────────────────────────────────────
 
-async def callback_edit_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def callback_edit_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """User pressed ✏️ Change Category — show category picker."""
     query = update.callback_query
     await query.answer()
-    await query.edit_message_text(
-        "📂 *Choose a category:*",
-        parse_mode="Markdown",
-        reply_markup=_category_keyboard(),
-    )
-    return AWAITING_CATEGORY
+    
+    expense_id = query.data.split(":")[2]
+    
+    try:
+        await query.edit_message_reply_markup(
+            reply_markup=_category_keyboard(expense_id)
+        )
+    except Exception:
+        pass
 
 
-async def callback_set_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def callback_set_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """User selected a category from the grid."""
     query = update.callback_query
     await query.answer()
 
-    chosen = query.data.split(":", 1)[1]  # e.g. "cat:Eating Out" → "Eating Out"
-    pending = context.user_data.get(_PENDING_KEY)
-
-    if not pending:
-        await query.edit_message_text("⚠️ Session expired. Please re-enter the expense.")
-        return ConversationHandler.END
-
-    pending["category"] = chosen
-    context.user_data[_PENDING_KEY] = pending
-
-    preview = build_expense_preview(
-        amount=pending["amount"],
-        description=pending["description"],
-        category=chosen,
-        date=pending["date"],
-    )
-
-    await query.edit_message_text(
-        preview,
-        parse_mode="Markdown",
-        reply_markup=_confirm_keyboard(),
-    )
-    return AWAITING_CONFIRM
+    parts = query.data.split(":")
+    expense_id = parts[1]
+    chosen = parts[2]
+    
+    try:
+        supabase.table("expenses").update({"category": chosen}).eq("id", expense_id).execute()
+        
+        # We don't re-render the image to save time/bandwidth, just update the caption
+        caption = f"✅ *Category updated to {chosen}!*"
+        try:
+            await query.edit_message_caption(
+                caption=caption,
+                parse_mode="Markdown",
+                reply_markup=_confirm_keyboard(expense_id)
+            )
+        except Exception:
+            await query.edit_message_text(
+                caption,
+                parse_mode="Markdown",
+                reply_markup=_confirm_keyboard(expense_id)
+            )
+    except Exception as exc:
+        logger.exception("Failed to update category: %s", exc)
 
 
 # ── /undo command ─────────────────────────────────────────────────────────────
@@ -485,33 +471,13 @@ async def callback_batch_cancel(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data.pop(_PENDING_BATCH_KEY, None)
 
 
-# ── ConversationHandler factory ───────────────────────────────────────────────
+# ── Handler Registration ──────────────────────────────────────────────────
 
-def build_expense_conversation() -> ConversationHandler:
-    """Build and return the ConversationHandler for expense logging."""
-    return ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message),
-        ],
-        states={
-            AWAITING_CONFIRM: [
-                CallbackQueryHandler(callback_save, pattern="^expense:save$"),
-                CallbackQueryHandler(callback_edit_category, pattern="^expense:edit_cat$"),
-                CallbackQueryHandler(callback_cancel, pattern="^expense:cancel$"),
-            ],
-            AWAITING_CATEGORY: [
-                CallbackQueryHandler(callback_set_category, pattern="^cat:"),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("cancel", lambda u, c: (
-                u.effective_message.reply_text("❌ Cancelled."),
-                ConversationHandler.END,
-            )),
-        ],
-        per_user=True,
-        per_chat=True,
-        name="expense_conversation",
-        persistent=True,
-    )
-
+def get_expense_handlers() -> list:
+    """Return all handlers for expense logging."""
+    return [
+        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message),
+        CallbackQueryHandler(callback_edit_category, pattern="^exp:edit:"),
+        CallbackQueryHandler(callback_undo_expense, pattern="^exp:undo:"),
+        CallbackQueryHandler(callback_set_category, pattern="^cat:"),
+    ]
