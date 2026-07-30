@@ -14,7 +14,8 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
-    filters
+    filters,
+    DictPersistence
 )
 from bot.config import TELEGRAM_BOT_TOKEN
 from bot.handlers.expense import (
@@ -34,6 +35,9 @@ from bot.handlers.digest import digest_command
 from bot.handlers.expense import undo_command
 import bot.config as config
 from bot.main import start_command, help_command, post_init
+
+# Persist conversation state across warm Vercel invocations
+_global_persistence = DictPersistence()
 
 
 class handler(BaseHTTPRequestHandler):
@@ -59,6 +63,7 @@ class handler(BaseHTTPRequestHandler):
                 app = (
                     Application.builder()
                     .token(TELEGRAM_BOT_TOKEN)
+                    .persistence(_global_persistence)
                     .build()
                 )
                 from bot.handlers.copilot import (
