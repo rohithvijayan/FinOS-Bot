@@ -391,50 +391,7 @@ async def handle_pdf_document(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         total_amount = sum(i["amount"] for i in new_items)
 
-        # Store in pending batch
-        context.user_data[_PENDING_BATCH_KEY] = new_items
-
-        lines = [
-            f"📄 *Bank Statement Parsed:* `{doc.file_name}`\n",
-            f"⚡ *{len(new_items)} New Debit Expenses Found* (Total: {fmt_inr(total_amount)})",
-            f"_{skipped_count} existing transactions skipped_\n" if skipped_count > 0 else "",
-            "*Itemized Breakdown:*",
-        ]
-
-        for i, item in enumerate(new_items[:12], 1):
-            lines.append(f"{i}. `{item['date']}` · *{item['description']}* · {fmt_inr(item['amount'])} ({item['category']})")
-
-        if len(new_items) > 12:
-            lines.append(f"_...and {len(new_items) - 12} more transactions_")
-
-        kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton(f"✅ Batch Save {len(new_items)} Items to Supabase", callback_data="batch:save")],
-            [InlineKeyboardButton("❌ Cancel Import", callback_data="batch:cancel")]
-        ])
-
-        await thinking.delete()
-        await update.effective_message.reply_text(
-            "\n".join(lines),
-            parse_mode="Markdown",
-            reply_markup=kb
-        )
-
-    except Exception as exc:
-        logger.exception("Failed to process PDF statement: %s", exc)
-        await thinking.edit_text("❌ Error processing PDF statement. Check bot logs.")
-
-
-async def callback_batch_save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """User pressed ✅ Batch Save for PDF import."""
-    query = update.callback_query
-    await query.answer()
-
-    batch_items = context.user_data.get(_PENDING_BATCH_KEY)
-    if not batch_items:
-        await query.edit_message_text("⚠️ Batch data lost or expired. Please re-upload the PDF.")
-        return
-
-    try:
+        # Auto-Save to Supabase
         rows_to_insert = [
             {
                 "date": item["date"],
@@ -443,32 +400,38 @@ async def callback_batch_save(update: Update, context: ContextTypes.DEFAULT_TYPE
                 "category": item["category"],
                 "month": item["month"],
             }
-            for item in batch_items
+            for item in new_items
         ]
 
-        res = supabase.table("expenses").insert(rows_to_insert).execute()
-        count = len(res.data) if res.data else len(rows_to_insert)
-        total_amt = sum(item["amount"] for item in batch_items)
+        try:
+            res = supabase.table("expenses").insert(rows_to_insert).execute()
+            count = len(res.data) if res.data else len(rows_to_insert)
+            
+            lines = [
+                f"🎉 *Batch Import Complete!*\n",
+                f"✅ Successfully inserted *{count} new transactions* (Total: {fmt_inr(total_amount)}) into Supabase!\n",
+                f"_{skipped_count} existing transactions skipped_\n" if skipped_count > 0 else "",
+                "*Itemized Breakdown:*",
+            ]
 
-        await query.edit_message_text(
-            f"🎉 *Batch Import Complete!*\n\n"
-            f"✅ Successfully inserted *{count} transactions* (Total: {fmt_inr(total_amt)}) into Supabase!\n\n"
-            f"_Your FinOS dashboard and monthly spending totals are updated._",
-            parse_mode="Markdown"
-        )
+            for i, item in enumerate(new_items[:12], 1):
+                lines.append(f"{i}. `{item['date']}` · *{item['description']}* · {fmt_inr(item['amount'])} ({item['category']})")
+
+            if len(new_items) > 12:
+                lines.append(f"_...and {len(new_items) - 12} more transactions_")
+
+            await thinking.delete()
+            await update.effective_message.reply_text(
+                "\n".join(lines),
+                parse_mode="Markdown"
+            )
+        except Exception as exc:
+            logger.exception("Failed batch insert to Supabase: %s", exc)
+            await thinking.edit_text("❌ Failed batch save to database. Check bot logs.")
+
     except Exception as exc:
-        logger.exception("Failed batch insert to Supabase: %s", exc)
-        await query.edit_message_text("❌ Failed batch save to database. Check bot logs.")
-
-    context.user_data.pop(_PENDING_BATCH_KEY, None)
-
-
-async def callback_batch_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """User pressed ❌ Cancel Import."""
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("❌ Batch PDF import cancelled.")
-    context.user_data.pop(_PENDING_BATCH_KEY, None)
+        logger.exception("Failed to process PDF statement: %s", exc)
+        await thinking.edit_text("❌ Error processing PDF statement. Check bot logs.")
 
 
 # ── Handler Registration ──────────────────────────────────────────────────

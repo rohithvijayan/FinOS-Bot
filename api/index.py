@@ -20,9 +20,7 @@ from telegram.ext import (
 from bot.config import TELEGRAM_BOT_TOKEN
 from bot.handlers.expense import (
     get_expense_handlers,
-    handle_pdf_document,
-    callback_batch_save,
-    callback_batch_cancel
+    handle_pdf_document
 )
 from bot.handlers.spending import (
     spending_command,
@@ -85,8 +83,6 @@ class handler(BaseHTTPRequestHandler):
                     app.add_handler(CallbackQueryHandler(copilot_refresh,      pattern="^cop:refresh$"))
                 app.add_handler(CallbackQueryHandler(callback_open_month_picker, pattern="^spend_pick:open$"))
                 app.add_handler(CallbackQueryHandler(callback_select_spending_month, pattern="^spend_month:"))
-                app.add_handler(CallbackQueryHandler(callback_batch_save, pattern="^batch:save$"))
-                app.add_handler(CallbackQueryHandler(callback_batch_cancel, pattern="^batch:cancel$"))
 
                 await app.initialize()
                 update = Update.de_json(update_data, app.bot)
