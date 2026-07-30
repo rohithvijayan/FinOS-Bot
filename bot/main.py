@@ -20,7 +20,7 @@ from bot.config import TELEGRAM_BOT_TOKEN, ALLOWED_CHAT_IDS
 from bot.handlers.balance import balance_command
 from bot.handlers.spending import spending_command
 from bot.handlers.portfolio import portfolio_command
-from bot.handlers.expense import build_expense_conversation, undo_command
+from bot.handlers.expense import get_expense_handlers, undo_command
 from bot.handlers.auth import allowed_only
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -178,8 +178,8 @@ def main() -> None:
         .build()
     )
 
-    # Register the expense conversation (must be before catch-all handlers)
-    app.add_handler(build_expense_conversation())
+    for h in get_expense_handlers():
+        app.add_handler(h)
 
     from telegram.ext import CallbackQueryHandler
     from bot.handlers.spending import callback_open_month_picker, callback_select_spending_month
