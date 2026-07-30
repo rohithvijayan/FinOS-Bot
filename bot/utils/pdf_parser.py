@@ -72,7 +72,7 @@ CRITICAL RULES:
 5. Respond ONLY with a valid JSON array of objects:
 [
   {{
-    "amount": <number, positive float>,
+    "amount": <number, absolute positive float (no negative signs)>,
     "description": "<merchant or payee name, max 40 chars>",
     "category": "<one of available categories>",
     "date": "<DD-MMM-YYYY format>"
@@ -101,12 +101,12 @@ async def parse_pdf_statement_transactions(pdf_text: str) -> list[dict[str, Any]
             
             validated = []
             for item in parsed_list:
-                amt = float(item.get("amount", 0))
+                amt = abs(float(item.get("amount", 0)))
                 desc = str(item.get("description", "Expense")).strip()
                 cat = str(item.get("category", "Others")).strip()
                 dt_str = str(item.get("date", "")).strip()
 
-                if amt <= 0:
+                if amt == 0:
                     continue
                 if cat not in UI_CATEGORIES:
                     cat = guess_category(desc) or "Others"
@@ -173,22 +173,47 @@ def _local_regex_statement_parser(text: str) -> list[dict[str, Any]]:
         if in_refunds_section:
             continue
 
-        # Look for Slice pattern: Merchant name on one line, Date • UPI on next, ₹Amount on next
         amt_match = re.search(r"₹\s*([\d,]+(?:\.\d{1,2})?)", line)
+        neg_match = re.search(r"(?:^|\s)-\s*([\d,]+(?:\.\d{2}))(?:\s|$)", line)
+        
+        amt = 0.0
         if amt_match:
             amt = float(amt_match.group(1).replace(",", ""))
-            # Search preceding lines for merchant and date
+        elif neg_match:
+            amt = float(neg_match.group(1).replace(",", ""))
+
+        if amt > 0:
             desc = "Expense"
             dt_str = date.today().strftime("%d-%b-%Y")
 
-            for k in range(max(0, i - 3), i):
-                prev_line = lines[k]
-                if re.search(r"\d{1,2}\s+[A-Za-z]{3}", prev_line):
-                    dt_str = _normalize_date_str(prev_line)
-                elif not re.search(r"₹|UPI|Card|Spends|Summary", prev_line) and len(prev_line) < 35:
-                    desc = prev_line
+            if neg_match:
+                # Tabular pattern: look for merchant at the start of line or previous line
+                prefix = line[:neg_match.start()].strip()
+                prefix = re.sub(r"(?i)\b(HSBC|HDFC|ICICI|SBI|AXIS|SLICE|BANK|CREDIT|CARD|RUPAY|VISA|MASTERCARD)\b.*", "", prefix).strip()
+                if prefix and len(prefix) > 2 and not prefix.isdigit():
+                    desc = prefix
+                else:
+                    if i > 0:
+                        prev = lines[i-1]
+                        prev = re.sub(r"(?i)\b(HSBC|HDFC|ICICI|SBI|AXIS|SLICE|BANK|CREDIT|CARD|RUPAY|VISA|MASTERCARD)\b.*", "", prev).strip()
+                        if prev and len(prev) > 2:
+                            desc = prev
+                
+                # Find date in context
+                context_lines = lines[max(0, i - 3):i+2]
+                for cline in reversed(context_lines):
+                    if re.search(r"\d{1,2}\s+[A-Za-z]{3}", cline) or re.search(r"\d{4}-\d{2}-\d{2}", cline):
+                        dt_str = _normalize_date_str(cline)
+                        break
+            else:
+                for k in range(max(0, i - 3), i):
+                    prev_line = lines[k]
+                    if re.search(r"\d{1,2}\s+[A-Za-z]{3}", prev_line):
+                        dt_str = _normalize_date_str(prev_line)
+                    elif not re.search(r"₹|UPI|Card|Spends|Summary", prev_line) and len(prev_line) < 35:
+                        desc = prev_line
 
-            if amt > 0 and desc not in ["Total amount due", "Spends", "Earned", "Min amount due"]:
+            if desc not in ["Total amount due", "Spends", "Earned", "Min amount due"]:
                 cat = guess_category(desc) or "Others"
                 d_obj = _parse_expense_date(dt_str) or date.today()
                 month_label = _get_billing_month(d_obj)
